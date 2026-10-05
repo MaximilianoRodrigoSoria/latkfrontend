@@ -15,11 +15,13 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import { IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../auth/authStore';
 import { hasAnyPermission, isSeller, roleLabel } from '../auth/permissions';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { BrandMark } from '../shared/components/BrandMark';
+import { setNotifyNavigator } from '../shared/notify';
 import { NAV_ITEMS } from './navigation';
 
 const HEADER_HEIGHT = 56;
@@ -42,6 +44,12 @@ export function AppLayout() {
       (!item.permissions || hasAnyPermission(user, item.permissions)) &&
       (!item.sellerOnly || isSeller(user)),
   );
+  // Los avisos emergentes con link navegan con el router (sin recargar la app).
+  useEffect(() => {
+    setNotifyNavigator((to) => void navigate(to));
+    return () => setNotifyNavigator(null);
+  }, [navigate]);
+
   const barItems = items.filter((item) => !item.menuOnly);
   const menuItems = items.filter((item) => item.menuOnly);
   const isActive = (to: string) =>
@@ -62,7 +70,8 @@ export function AppLayout() {
       <AppShell.Header className="latk-safe-top">
         <Group h={HEADER_HEIGHT} px="md" justify="space-between" wrap="nowrap">
           <BrandMark size={28} />
-          <Group gap="md" wrap="nowrap">
+          <Group gap="xs" wrap="nowrap">
+            <NotificationBell />
             <ActionIcon
               variant="subtle"
               size="lg"

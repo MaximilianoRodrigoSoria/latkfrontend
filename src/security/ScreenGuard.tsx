@@ -4,6 +4,7 @@ import { IconEyeOff } from '@tabler/icons-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAuthStore } from '../auth/authStore';
 import { requiresScreenProtection } from '../auth/permissions';
+import { SCREENSHOTS_ALLOWED } from './screenshotsMode';
 import { useNativeScreenProtection } from './useNativeScreenProtection';
 import { watermarkDataUrl, watermarkLabel } from './watermark';
 
@@ -19,7 +20,7 @@ const BLOCKED_SHORTCUTS = new Set(['p', 's']); // imprimir y guardar pagina
  */
 export function ScreenGuard({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
-  const protect = requiresScreenProtection(user);
+  const protect = !SCREENSHOTS_ALLOWED && requiresScreenProtection(user);
   const scheme = useComputedColorScheme('light');
   const [concealed, setConcealed] = useState(false);
   const [now, setNow] = useState(() => new Date());

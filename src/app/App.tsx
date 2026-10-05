@@ -1,11 +1,11 @@
 import { DatesProvider } from '@mantine/dates';
-import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import 'dayjs/locale/es';
 import { RouterProvider } from 'react-router';
 import { configureHttp } from '../api/http';
 import { getToken, useAuthStore } from '../auth/authStore';
 import { ScreenGuard } from '../security/ScreenGuard';
+import { ToastHost } from '../shared/components/ToastHost';
 import { DynamicThemeProvider } from '../theme/DynamicThemeProvider';
 import { router } from './router';
 
@@ -26,7 +26,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <DynamicThemeProvider>
         <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1 }}>
-          <Notifications position="top-center" />
+          <ToastHost />
           <ScreenGuard>
             <RouterProvider router={router} />
           </ScreenGuard>

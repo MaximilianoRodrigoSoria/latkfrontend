@@ -323,3 +323,66 @@ export interface CollectionAccount {
   updatedAt?: string;
   updatedBy?: string | null;
 }
+
+export type NotificationTone = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  tone: NotificationTone;
+  title: string;
+  message: string;
+  /** Ruta interna a la que lleva. */
+  link?: string | null;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface NotificationInbox {
+  unreadCount: number;
+  items: AppNotification[];
+}
+
+export type DelinquencyLevel = 'BIEN' | 'MEDIA' | 'ALTA';
+
+export interface StatsWindow {
+  installments: number;
+  amount: number;
+}
+
+export interface PortfolioStats {
+  today: string;
+  loansByStatus: Record<LoanStatus, number>;
+  lent: number;
+  collected: number;
+  toCollect: number;
+  interestCollected: number;
+  /** Solo para quien ve toda la cartera. */
+  commissionsGenerated?: number;
+  overdue: {
+    installments: number;
+    amount: number;
+    loansWithOverdue: number;
+    activeLoans: number;
+    ratio: number;
+    level: DelinquencyLevel;
+  };
+  dueNext7Days: StatsWindow;
+  collectedThisMonth: StatsWindow;
+  dueThisMonth: StatsWindow;
+  /** month: YYYY-MM */
+  months: { month: string; collected: number; pending: number }[];
+  sellers: {
+    sellerId: string;
+    sellerName: string;
+    activeLoans: number;
+    lent: number;
+    collected: number;
+    toCollect: number;
+    overdueAmount: number;
+    loansWithOverdue: number;
+    delinquencyRatio: number;
+    level: DelinquencyLevel;
+    commissionsGenerated: number;
+  }[];
+}

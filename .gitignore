@@ -6,6 +6,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# Sin secretos: solo activa el modo capturas de npm run local.
+!.env.capturas
 .idea/
 .vscode/
 *.log

@@ -10,6 +10,8 @@ import type {
   LoginRequest,
   LoginResponse,
   NewSellerRequest,
+  NotificationInbox,
+  PortfolioStats,
   ProductOffer,
   ProductRequest,
   ProductResponse,
@@ -101,6 +103,14 @@ export const api = {
   updateCollectionAccount: (body: CollectionAccount) =>
     request<CollectionAccount>('/api/v1/settings/collection-account', { method: 'PUT', body }),
 
+  notifications: (limit = 30) => request<NotificationInbox>(`/api/v1/notifications?limit=${limit}`),
+  markNotificationRead: (id: string) =>
+    request<void>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () =>
+    request<void>('/api/v1/notifications/read-all', { method: 'POST' }),
+
+  portfolioStats: () => request<PortfolioStats>('/api/v1/stats/portfolio'),
+
   theme: () => request<ThemeResponse>('/api/v1/settings/theme'),
   updateTheme: (body: ThemeTokens) =>
     request<ThemeResponse>('/api/v1/settings/theme', { method: 'PUT', body }),
@@ -118,5 +128,7 @@ export const queryKeys = {
   seller: (id: string) => ['seller', id] as const,
   mySellerProfile: ['mySellerProfile'] as const,
   collectionAccount: ['collectionAccount'] as const,
+  notifications: ['notifications'] as const,
+  portfolioStats: ['portfolioStats'] as const,
   loan: (id: string) => ['loan', id] as const,
 };

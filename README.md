@@ -23,6 +23,7 @@ Se instala como app desde el navegador y además se empaqueta como **app Android
 ```bash
 npm install
 npm run dev          # http://localhost:5173 (proxy de /latk-api a localhost:8080)
+npm run local        # igual que dev pero SIN protección de pantalla, para sacar capturas
 npm test             # tests unitarios
 npm run build        # typecheck + build de producción (PWA)
 ```
@@ -64,6 +65,11 @@ src/
 | **Navegador / PWA** | **Disuasión**: marca de agua con usuario y hora, contenido oculto al perder el foco, sin copiar, imprimir ni menú contextual, y portapapeles limpio tras PrintScreen. Ningún navegador permite bloquear la captura del sistema operativo. |
 
 Recomendación operativa: que los vendedores usen la app Android y el administrador, la web.
+
+**Modo capturas** (`npm run local`): levanta el servidor de desarrollo con `.env.capturas`
+(`VITE_ALLOW_SCREENSHOTS=true`) y desactiva la protección para cualquier rol, para sacar capturas
+de documentación o presentaciones. Solo funciona en desarrollo: en un build de producción la
+protección queda siempre activa (el código del modo ni siquiera llega al build).
 
 ## App Android
 

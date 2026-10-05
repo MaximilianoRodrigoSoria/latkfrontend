@@ -34,9 +34,17 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    // En desarrollo la API va por proxy: mismo origen, sin CORS.
+    // En desarrollo la API va por proxy: mismo origen, sin CORS. Se quita el header Origin para
+    // que el backend no rechace (403) si Vite corre en otro puerto (5174 cuando el 5173 esta
+    // ocupado) o se abre desde el celular con --host.
     proxy: {
-      '/latk-api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/latk-api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
+        },
+      },
     },
   },
   test: {

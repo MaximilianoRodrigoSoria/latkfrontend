@@ -58,9 +58,9 @@ export function ProductForm({ submitting, onSubmit }: ProductFormProps) {
     initialValues: {
       name: '',
       frequency: 'WEEKLY',
-      ratePercent: 1,
+      ratePercent: 16.3511,
       allowedAmounts: ['50000', '100000', '150000', '200000'],
-      allowedInstallments: ['4', '5', '6'],
+      allowedInstallments: ['4', '6', '8', '12', '16'],
       graceDays: 2,
       lateFeePercent: 10,
       installmentsToDefault: 4,
@@ -72,9 +72,9 @@ export function ProductForm({ submitting, onSubmit }: ProductFormProps) {
       allowedAmounts: (v) =>
         toNumbers(v).length && toNumbers(v).every((n) => n > 0) ? null : 'Montos mayores a cero',
       allowedInstallments: (v) =>
-        toNumbers(v).length && toNumbers(v).every((n) => n >= 4 && n <= 6)
+        toNumbers(v).length && toNumbers(v).every((n) => n >= 4 && n <= 16)
           ? null
-          : 'Entre 4 y 6 cuotas',
+          : 'Entre 4 y 16 cuotas',
     },
   });
 
@@ -113,7 +113,7 @@ export function ProductForm({ submitting, onSubmit }: ProductFormProps) {
         />
         <TagsInput
           label="Cantidades de cuotas"
-          description="Entre 4 y 6 cuotas"
+          description="Entre 4 y 16 cuotas"
           {...form.getInputProps('allowedInstallments')}
         />
         <SimpleGrid cols={{ base: 1, xs: 3 }}>

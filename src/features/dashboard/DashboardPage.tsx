@@ -101,7 +101,12 @@ export function DashboardPage() {
           },
         ]
       : []),
-    { title: 'Indicadores', description: 'Cash flow y morosidad', icon: IconChartLine, soon: true },
+    {
+      title: 'Estadísticas',
+      description: 'Cobrado, por cobrar, mora y flujo por mes',
+      icon: IconChartLine,
+      to: '/stats',
+    },
   ];
 
   return (

@@ -50,6 +50,9 @@ const CollectionAccountPage = lazy(() =>
     default: m.CollectionAccountPage,
   })),
 );
+const StatsPage = lazy(() =>
+  import('../features/stats/StatsPage').then((m) => ({ default: m.StatsPage })),
+);
 const ThemeSettingsPage = lazy(() =>
   import('../features/settings/ThemeSettingsPage').then((m) => ({ default: m.ThemeSettingsPage })),
 );
@@ -158,6 +161,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission={Permission.PARAMETER_MANAGE}>
             <CollectionAccountPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'stats',
+        element: (
+          <RequirePermission permission={Permission.DASHBOARD_READ}>
+            <StatsPage />
           </RequirePermission>
         ),
       },

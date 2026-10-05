@@ -1,4 +1,5 @@
 import {
+  IconChartBar,
   IconBuildingBank,
   IconId,
   IconUserDollar,
@@ -57,6 +58,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Productos',
     icon: IconPackage,
     permissions: [Permission.PRODUCT_READ],
+  },
+  {
+    to: '/stats',
+    label: 'Estadísticas',
+    icon: IconChartBar,
+    permissions: [Permission.DASHBOARD_READ],
+    menuOnly: true,
   },
   {
     to: '/profile',
