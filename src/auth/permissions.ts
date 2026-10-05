@@ -14,10 +14,24 @@ export const Permission = {
   LOAN_SIMULATE: 'loan.simulate',
   DASHBOARD_READ: 'dashboard.read',
   COMMISSION_READ_OWN: 'commission.read.own',
+  CUSTOMER_CREATE: 'customer.create',
+  LOAN_REQUEST: 'loan.request',
+  LOAN_APPROVE: 'loan.approve',
+  DISBURSEMENT_REGISTER: 'disbursement.register',
+  COLLECTION_REGISTER: 'collection.register',
+  COLLECTION_REVERT: 'collection.revert',
+  SELLER_MANAGE: 'seller.manage',
+  PROFILE_MANAGE_OWN: 'profile.manage.own',
+  LOAN_READ_OWN: 'loan.read.own',
+  LOAN_READ_ALL: 'loan.read.all',
 } as const;
 
 export function hasPermission(user: SessionUser | null, permission: string): boolean {
   return !!user && user.permissions.includes(permission);
+}
+
+export function hasAnyPermission(user: SessionUser | null, permissions: string[]): boolean {
+  return permissions.some((p) => hasPermission(user, p));
 }
 
 export function isAdmin(user: SessionUser | null): boolean {

@@ -18,7 +18,7 @@ import { IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
 import { Suspense } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../auth/authStore';
-import { hasPermission, roleLabel } from '../auth/permissions';
+import { hasAnyPermission, isSeller, roleLabel } from '../auth/permissions';
 import { BrandMark } from '../shared/components/BrandMark';
 import { NAV_ITEMS } from './navigation';
 
@@ -38,8 +38,12 @@ export function AppLayout() {
   const scheme = useComputedColorScheme('light');
 
   const items = NAV_ITEMS.filter(
-    (item) => !item.permission || hasPermission(user, item.permission),
+    (item) =>
+      (!item.permissions || hasAnyPermission(user, item.permissions)) &&
+      (!item.sellerOnly || isSeller(user)),
   );
+  const barItems = items.filter((item) => !item.menuOnly);
+  const menuItems = items.filter((item) => item.menuOnly);
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
@@ -85,6 +89,16 @@ export function AppLayout() {
                   </Badge>
                 </Stack>
                 <Menu.Divider />
+                {menuItems.map((item) => (
+                  <Menu.Item
+                    key={item.to}
+                    leftSection={<item.icon size={16} />}
+                    onClick={() => navigate(item.to)}
+                  >
+                    {item.label}
+                  </Menu.Item>
+                ))}
+                {menuItems.length > 0 && <Menu.Divider />}
                 <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={logout}>
                   Cerrar sesion
                 </Menu.Item>
@@ -121,7 +135,7 @@ export function AppLayout() {
 
       <AppShell.Footer hiddenFrom="sm" className="latk-bottom-nav">
         <Group h={BOTTOM_NAV_HEIGHT} grow gap="xs" px="xs" wrap="nowrap">
-          {items.map((item) => {
+          {barItems.map((item) => {
             const active = isActive(item.to);
             return (
               <UnstyledButton

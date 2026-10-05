@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { getToken, useAuthStore } from './authStore';
-import { hasPermission } from './permissions';
+import { hasAnyPermission, hasPermission } from './permissions';
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -23,5 +23,17 @@ export function RequirePermission({
 }) {
   const user = useAuthStore((s) => s.user);
   if (!hasPermission(user, permission)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+export function RequireAnyPermission({
+  permissions,
+  children,
+}: {
+  permissions: string[];
+  children: ReactNode;
+}) {
+  const user = useAuthStore((s) => s.user);
+  if (!hasAnyPermission(user, permissions)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

@@ -107,3 +107,219 @@ export interface ProblemDetail {
   detail?: string;
   validationErrors?: { field: string; message: string }[];
 }
+
+export interface AddressDto {
+  street: string;
+  number: string;
+  apartment?: string | null;
+  city: string;
+  province: string;
+  postalCode?: string | null;
+}
+
+export interface CustomerRequest {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  cuil: string;
+  birthDate: string;
+  phone: string;
+  email?: string | null;
+  address: AddressDto;
+  bankAccount: { cbu: string; alias?: string | null; bankName?: string | null };
+  occupation?: string | null;
+  monthlyIncome?: number | null;
+  notes?: string | null;
+}
+
+export interface CustomerResponse extends Omit<CustomerRequest, 'bankAccount'> {
+  id: string;
+  sellerId: string;
+  bankAccount: { cbu: string; alias: string | null; bankName: string | null; virtual: boolean };
+  createdAt: string;
+}
+
+export interface CustomerSummary {
+  id: string;
+  fullName: string;
+  dni: string;
+  phone: string;
+  city: string;
+}
+
+export type LoanStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'DISBURSED' | 'COMPLETED';
+
+export type InstallmentStatus = 'PENDING' | 'COLLECTED';
+
+/** Cuota real (despues del desembolso). */
+export interface InstallmentResponse {
+  number: number;
+  dueDate: string;
+  amount: number;
+  principal: number;
+  interest: number;
+  remainingBalance: number;
+  status: InstallmentStatus;
+  /** Pendiente con el vencimiento ya pasado. */
+  overdue: boolean;
+  collectedAt?: string | null;
+  collectedByName?: string | null;
+}
+
+export interface InstallmentEventResponse {
+  number: number;
+  type: 'COLLECTED' | 'REVERTED';
+  /** Cobro de una cuota que todavia no vencia. */
+  advance: boolean;
+  actorName: string;
+  reason?: string | null;
+  occurredAt: string;
+}
+
+export interface LoanRequestBody {
+  customerId: string;
+  productId: string;
+  amount: number;
+  installments: number;
+  notes?: string | null;
+}
+
+/** El backend nunca envia el % de comision del vendedor. */
+export interface LoanResponse {
+  id: string;
+  sellerName: string;
+  customerId: string;
+  customerName: string;
+  customerDni: string | null;
+  productName: string;
+  frequency: PaymentFrequency;
+  ratePerPeriod: number;
+  principal: number;
+  installments: number;
+  installmentAmount: number;
+  totalToRepay: number;
+  status: LoanStatus;
+  notes?: string | null;
+  requestedAt: string;
+  /** true si se aprobo sola por estar bajo el limite de monto. */
+  autoApproved: boolean;
+  decidedByName?: string | null;
+  decidedAt?: string | null;
+  /** Motivo del rechazo, o la regla de la aprobacion automatica. */
+  decisionReason?: string | null;
+  disbursedOn?: string | null;
+  disbursedByName?: string | null;
+  disbursementReference?: string | null;
+  /** Avance de cobro; solo con cuotas generadas. */
+  installmentsCollected?: number | null;
+  nextDueDate?: string | null;
+  /** Solo en el detalle: plan estimado (el definitivo se fija al desembolsar). */
+  estimatedSchedule?: InstallmentView[];
+  /** Solo en el detalle, despues del desembolso: cuotas reales. */
+  schedule?: InstallmentResponse[];
+  /** Solo en el detalle: cobros y reversiones, del mas viejo al mas nuevo. */
+  history?: InstallmentEventResponse[];
+}
+
+/** Ganancias del vendedor (en pesos; nunca el % de comision). */
+export interface EarningsResponse {
+  /** YYYY-MM */
+  currentMonth: string;
+  earnedThisMonth: number;
+  expectedThisMonth: number;
+  earnedTotal: number;
+  pendingTotal: number;
+  months: {
+    month: string;
+    earned: number;
+    expected: number;
+    installmentsCollected: number;
+    installmentsPending: number;
+  }[];
+  loans: {
+    loanId: string;
+    customerName: string;
+    principal: number;
+    status: LoanStatus;
+    installments: number;
+    installmentsCollected: number;
+    perInstallment: number;
+    earned: number;
+    pending: number;
+  }[];
+}
+
+export interface SellerAddress {
+  street: string;
+  number: string;
+  apartment?: string | null;
+  city: string;
+  province: string;
+  postalCode?: string | null;
+}
+
+export interface SellerBankAccount {
+  cbu: string;
+  alias?: string | null;
+  bankName?: string | null;
+  /** Solo en respuestas: true si es CVU. */
+  virtual?: boolean;
+}
+
+/** Lo que el propio vendedor puede editar. */
+export interface SellerContactRequest {
+  phone: string;
+  email: string | null;
+  address: SellerAddress | null;
+  bankAccount: SellerBankAccount;
+}
+
+/** Edicion completa por el administrador. */
+export interface SellerDataRequest extends SellerContactRequest {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  cuil: string;
+}
+
+export interface NewSellerRequest {
+  username: string;
+  password: string;
+  /** 0.05 = 5 % */
+  commissionRate: number;
+  data: SellerDataRequest;
+}
+
+export interface SellerResponse {
+  userId: string;
+  username: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName: string;
+  dni?: string | null;
+  cuil?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: SellerAddress | null;
+  bankAccount?: SellerBankAccount | null;
+  /** Solo para el administrador: en "mis datos" no viene. */
+  commissionRate?: number;
+  /** 0 a 100 */
+  completeness: number;
+  missingFields: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Cuenta del administrador donde los vendedores transfieren lo cobrado. */
+export interface CollectionAccount {
+  holderName: string;
+  holderCuit?: string | null;
+  cbu: string;
+  alias?: string | null;
+  bankName?: string | null;
+  instructions?: string | null;
+  virtual?: boolean;
+  updatedAt?: string;
+  updatedBy?: string | null;
+}

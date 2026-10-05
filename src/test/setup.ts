@@ -23,4 +23,11 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub;
 
+// Textarea autosize escucha la carga de fuentes.
+if (!document.fonts) {
+  Object.defineProperty(document, 'fonts', {
+    value: { addEventListener: () => undefined, removeEventListener: () => undefined },
+  });
+}
+
 afterEach(() => cleanup());

@@ -16,6 +16,8 @@ import {
   PERIOD_LABEL,
 } from '../../shared/format';
 import { notifyError } from '../../shared/notify';
+import { ShareButton } from '../../shared/share/ShareButton';
+import { simulationMessage } from '../../shared/share/shareMessages';
 
 export function SimulatorPage() {
   const products = useQuery({
@@ -125,6 +127,10 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
 
   return (
     <Stack>
+      <Group justify="space-between">
+        <Text fw={700}>Resultado</Text>
+        <ShareButton title="Simulación de préstamo" text={() => simulationMessage(result)} />
+      </Group>
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
         <Stat label="Cuota" value={formatMoney(result.installmentAmount)} highlight />
         <Stat label="Cuotas" value={`${result.installments} ${PERIOD_LABEL[result.frequency]}es`} />

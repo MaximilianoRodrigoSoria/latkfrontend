@@ -1,10 +1,21 @@
 import { request } from './http';
 import type {
+  CollectionAccount,
+  CustomerRequest,
+  CustomerResponse,
+  CustomerSummary,
+  EarningsResponse,
+  LoanRequestBody,
+  LoanResponse,
   LoginRequest,
   LoginResponse,
+  NewSellerRequest,
   ProductOffer,
   ProductRequest,
   ProductResponse,
+  SellerContactRequest,
+  SellerDataRequest,
+  SellerResponse,
   SimulationRequest,
   SimulationResponse,
   ThemeResponse,
@@ -35,6 +46,61 @@ export const api = {
       body: { password },
     }),
 
+  myEarnings: (password: string) =>
+    request<EarningsResponse>('/api/v1/earnings/me', { method: 'POST', body: { password } }),
+
+  customers: (search: string) =>
+    request<CustomerSummary[]>(
+      `/api/v1/customers${search ? `?search=${encodeURIComponent(search)}` : ''}`,
+    ),
+  customer: (id: string) => request<CustomerResponse>(`/api/v1/customers/${id}`),
+  createCustomer: (body: CustomerRequest) =>
+    request<CustomerResponse>('/api/v1/customers', { method: 'POST', body }),
+
+  loans: () => request<LoanResponse[]>('/api/v1/loans'),
+  loan: (id: string) => request<LoanResponse>(`/api/v1/loans/${id}`),
+  createLoan: (body: LoanRequestBody) =>
+    request<LoanResponse>('/api/v1/loans', { method: 'POST', body }),
+  disburseLoan: (id: string, reference: string | null) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/disbursement`, {
+      method: 'POST',
+      body: { reference },
+    }),
+  collectInstallment: (id: string, number: number) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/collect`, {
+      method: 'POST',
+    }),
+  revertInstallment: (id: string, number: number, reason: string) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/revert`, {
+      method: 'POST',
+      body: { reason },
+    }),
+  approveLoan: (id: string) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/approve`, { method: 'POST' }),
+  rejectLoan: (id: string, reason: string) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/reject`, { method: 'POST', body: { reason } }),
+
+  sellers: () => request<SellerResponse[]>('/api/v1/sellers'),
+  seller: (id: string) => request<SellerResponse>(`/api/v1/sellers/${id}`),
+  createSeller: (body: NewSellerRequest) =>
+    request<SellerResponse>('/api/v1/sellers', { method: 'POST', body }),
+  updateSeller: (id: string, body: SellerDataRequest) =>
+    request<SellerResponse>(`/api/v1/sellers/${id}`, { method: 'PUT', body }),
+  setSellerCommission: (id: string, commissionRate: number) =>
+    request<unknown>(`/api/v1/sellers/${id}/commission`, {
+      method: 'PUT',
+      body: { commissionRate },
+    }),
+  mySellerProfile: () => request<SellerResponse>('/api/v1/sellers/me'),
+  updateMySellerProfile: (body: SellerContactRequest) =>
+    request<SellerResponse>('/api/v1/sellers/me', { method: 'PUT', body }),
+
+  /** undefined si el administrador todavia no la cargo (204). */
+  collectionAccount: () =>
+    request<CollectionAccount | undefined>('/api/v1/settings/collection-account'),
+  updateCollectionAccount: (body: CollectionAccount) =>
+    request<CollectionAccount>('/api/v1/settings/collection-account', { method: 'PUT', body }),
+
   theme: () => request<ThemeResponse>('/api/v1/settings/theme'),
   updateTheme: (body: ThemeTokens) =>
     request<ThemeResponse>('/api/v1/settings/theme', { method: 'PUT', body }),
@@ -45,4 +111,12 @@ export const queryKeys = {
   products: (onlyAvailable: boolean) => ['products', { onlyAvailable }] as const,
   theme: ['theme'] as const,
   offers: ['offers'] as const,
+  customers: (search: string) => ['customers', { search }] as const,
+  customer: (id: string) => ['customer', id] as const,
+  loans: ['loans'] as const,
+  sellers: ['sellers'] as const,
+  seller: (id: string) => ['seller', id] as const,
+  mySellerProfile: ['mySellerProfile'] as const,
+  collectionAccount: ['collectionAccount'] as const,
+  loan: (id: string) => ['loan', id] as const,
 };

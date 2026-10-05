@@ -3,7 +3,11 @@ import {
   IconCalculator,
   IconCash,
   IconChartLine,
+  IconCoin,
+  IconId,
+  IconUserDollar,
   IconPackage,
+  IconReceipt2,
   IconUsers,
   type Icon,
 } from '@tabler/icons-react';
@@ -11,7 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { useAuthStore } from '../../auth/authStore';
-import { hasPermission, Permission, roleLabel } from '../../auth/permissions';
+import { hasPermission, isSeller, Permission, roleLabel } from '../../auth/permissions';
 
 interface Tile {
   title: string;
@@ -30,6 +34,14 @@ export function DashboardPage() {
     enabled: canReadProducts,
   });
 
+  const canApprove = hasPermission(user, Permission.LOAN_APPROVE);
+  const loans = useQuery({
+    queryKey: queryKeys.loans,
+    queryFn: api.loans,
+    enabled: canApprove,
+  });
+  const pending = loans.data?.filter((l) => l.status === 'REQUESTED').length ?? 0;
+
   const tiles: Tile[] = [
     {
       title: 'Simular prestamo',
@@ -43,8 +55,52 @@ export function DashboardPage() {
       icon: IconPackage,
       to: '/products',
     },
-    { title: 'Clientes', description: 'Alta y cartera propia', icon: IconUsers, soon: true },
-    { title: 'Cobranzas', description: 'Cuotas, rendiciones y mora', icon: IconCash, soon: true },
+    { title: 'Clientes', description: 'Alta y cartera propia', icon: IconUsers, to: '/customers' },
+    {
+      title: 'Préstamos',
+      description:
+        canApprove && pending > 0
+          ? `${pending} pendiente${pending === 1 ? '' : 's'} de aprobación`
+          : 'Solicitudes y estado',
+      icon: IconReceipt2,
+      to: '/loans',
+    },
+    {
+      title: 'Cobranzas',
+      description: 'Préstamos en curso y cuotas a cobrar',
+      icon: IconCash,
+      to: '/loans?status=DISBURSED',
+    },
+    ...(hasPermission(user, Permission.SELLER_MANAGE)
+      ? [
+          {
+            title: 'Vendedores',
+            description: 'Alta, datos, CBU y comisión',
+            icon: IconUserDollar,
+            to: '/sellers',
+          },
+        ]
+      : []),
+    ...(hasPermission(user, Permission.PROFILE_MANAGE_OWN)
+      ? [
+          {
+            title: 'Mis datos',
+            description: 'Tu CBU y dónde transferir lo cobrado',
+            icon: IconId,
+            to: '/profile',
+          },
+        ]
+      : []),
+    ...(isSeller(user)
+      ? [
+          {
+            title: 'Mis ganancias',
+            description: 'Lo que ganaste este mes y lo que te falta cobrar',
+            icon: IconCoin,
+            to: '/earnings',
+          },
+        ]
+      : []),
     { title: 'Indicadores', description: 'Cash flow y morosidad', icon: IconChartLine, soon: true },
   ];
 
