@@ -164,6 +164,8 @@ export interface InstallmentResponse {
   overdue: boolean;
   collectedAt?: string | null;
   collectedByName?: string | null;
+  /** Pendiente y con telefono del cliente: link wa.me con el recordatorio ya escrito. */
+  reminderUrl?: string | null;
 }
 
 export interface InstallmentEventResponse {
@@ -334,6 +336,8 @@ export interface AppNotification {
   message: string;
   /** Ruta interna a la que lleva. */
   link?: string | null;
+  /** Recordatorios de cobro: link wa.me con el mensaje para el cliente. */
+  whatsappUrl?: string | null;
   createdAt: string;
   read: boolean;
 }
@@ -385,4 +389,29 @@ export interface PortfolioStats {
     level: DelinquencyLevel;
     commissionsGenerated: number;
   }[];
+}
+
+export type CustomerActivityType =
+  | 'LOAN_REQUESTED'
+  | 'LOAN_AUTO_APPROVED'
+  | 'LOAN_APPROVED'
+  | 'LOAN_REJECTED'
+  | 'LOAN_DISBURSED'
+  | 'INSTALLMENT_COLLECTED'
+  | 'INSTALLMENT_REVERTED'
+  | 'LOAN_COMPLETED';
+
+/** Un hecho de la historia del cliente (lo nuevo primero). */
+export interface CustomerActivity {
+  at: string;
+  type: CustomerActivityType;
+  loanId: string;
+  productName?: string | null;
+  installmentNumber?: number | null;
+  amount?: number | null;
+  /** Ausente si fue automatico. */
+  actorName?: string | null;
+  /** Motivo de rechazo o reversion, referencia de la transferencia, notas. */
+  detail?: string | null;
+  advance: boolean;
 }

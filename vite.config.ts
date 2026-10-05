@@ -34,6 +34,10 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    // Probar desde el celular con un tunel de Cloudflare (cloudflared tunnel --url
+    // http://localhost:5173): sus subdominios cambian en cada corrida, por eso el comodin. Solo
+    // afecta al servidor de desarrollo, no al build.
+    allowedHosts: ['.trycloudflare.com'],
     // En desarrollo la API va por proxy: mismo origen, sin CORS. Se quita el header Origin para
     // que el backend no rechace (403) si Vite corre en otro puerto (5174 cuando el 5173 esta
     // ocupado) o se abre desde el celular con --host.

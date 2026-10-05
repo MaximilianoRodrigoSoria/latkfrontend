@@ -1,6 +1,7 @@
 import { request } from './http';
 import type {
   CollectionAccount,
+  CustomerActivity,
   CustomerRequest,
   CustomerResponse,
   CustomerSummary,
@@ -108,6 +109,12 @@ export const api = {
     request<void>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
   markAllNotificationsRead: () =>
     request<void>('/api/v1/notifications/read-all', { method: 'POST' }),
+  deleteNotification: (id: string) =>
+    request<void>(`/api/v1/notifications/${id}`, { method: 'DELETE' }),
+  deleteReadNotifications: () => request<void>('/api/v1/notifications/read', { method: 'DELETE' }),
+
+  customerActivity: (customerId: string) =>
+    request<CustomerActivity[]>(`/api/v1/customers/${customerId}/activity`),
 
   portfolioStats: () => request<PortfolioStats>('/api/v1/stats/portfolio'),
 
@@ -123,6 +130,7 @@ export const queryKeys = {
   offers: ['offers'] as const,
   customers: (search: string) => ['customers', { search }] as const,
   customer: (id: string) => ['customer', id] as const,
+  customerActivity: (id: string) => ['customerActivity', id] as const,
   loans: ['loans'] as const,
   sellers: ['sellers'] as const,
   seller: (id: string) => ['seller', id] as const,

@@ -23,6 +23,7 @@ export function formatRate(rate: number): string {
 }
 
 export const formatDate = (iso: string) => dayjs(iso).format('DD/MM/YYYY');
+export const formatDateTime = (iso: string) => dayjs(iso).format('DD/MM/YYYY HH:mm');
 
 export const FREQUENCY_LABEL: Record<PaymentFrequency, string> = {
   WEEKLY: 'Semanal',

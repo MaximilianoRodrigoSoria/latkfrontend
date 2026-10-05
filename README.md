@@ -81,3 +81,14 @@ npm run cap:open                # abre Android Studio para compilar/firmar el AP
 
 Requiere Android Studio (JDK 21 y Android SDK). `android:allowBackup` está en `false` para que el
 token de sesión no viaje en los backups de Android.
+
+## Probar desde el celular con Cloudflare Tunnel
+
+```bash
+npm run dev                                         # o npm run local
+cloudflared tunnel --url http://localhost:5173      # da una URL https://<algo>.trycloudflare.com
+```
+
+`vite.config.ts` acepta cualquier subdominio de `trycloudflare.com` (`server.allowedHosts`). La API
+viaja por el mismo túnel gracias al proxy `/latk-api`, así que el backend sigue en `localhost:8080`.
+La URL es pública mientras el túnel esté abierto: cerrarlo al terminar.

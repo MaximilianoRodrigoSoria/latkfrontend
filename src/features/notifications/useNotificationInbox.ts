@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
-import type { AppNotification, NotificationTone } from '../../api/types';
+import type { AppNotification, NotificationInbox, NotificationTone } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { notify, type Tone } from '../../shared/notify';
 
@@ -23,6 +23,18 @@ export const toneOf = (n: Pick<AppNotification, 'tone'>): Tone => TONE[n.tone] ?
  * Las nuevas desde la ultima consulta que todavia no se leyeron. En la primera carga no hay
  * "nuevas": todo lo existente se toma como ya visto (se resume en un solo aviso).
  */
+/** Saca de la bandeja las que cumplen la condicion y recalcula las no leidas. */
+export function withoutItems(
+  inbox: NotificationInbox,
+  drop: (n: AppNotification) => boolean,
+): NotificationInbox {
+  const removedUnread = inbox.items.filter((n) => drop(n) && !n.read).length;
+  return {
+    unreadCount: Math.max(0, inbox.unreadCount - removedUnread),
+    items: inbox.items.filter((n) => !drop(n)),
+  };
+}
+
 export function freshNotifications(items: AppNotification[], seen: Set<string>) {
   return items.filter((n) => !n.read && !seen.has(n.id));
 }
@@ -105,6 +117,25 @@ export function useNotificationInbox() {
     mutationFn: () => api.markAllNotificationsRead(),
     onSettled: refresh,
   });
+  // Borrar se ve al instante: se saca de la bandeja antes de que responda el servidor.
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteNotification(id),
+    onMutate: (id: string) => {
+      queryClient.setQueryData<NotificationInbox>(queryKeys.notifications, (current) =>
+        current ? withoutItems(current, (n) => n.id === id) : current,
+      );
+    },
+    onSettled: refresh,
+  });
+  const removeRead = useMutation({
+    mutationFn: () => api.deleteReadNotifications(),
+    onMutate: () => {
+      queryClient.setQueryData<NotificationInbox>(queryKeys.notifications, (current) =>
+        current ? withoutItems(current, (n) => n.read) : current,
+      );
+    },
+    onSettled: refresh,
+  });
 
-  return { inbox: inbox.data, isLoading: inbox.isLoading, markRead, markAll };
+  return { inbox: inbox.data, isLoading: inbox.isLoading, markRead, markAll, remove, removeRead };
 }

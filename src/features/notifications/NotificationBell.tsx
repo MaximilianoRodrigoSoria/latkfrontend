@@ -16,11 +16,13 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconInfoCircle,
+  IconTrash,
   type Icon,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { AppNotification, NotificationTone } from '../../api/types';
+import { WhatsAppIcon } from '../../shared/components/WhatsAppButton';
 import { formatDate } from '../../shared/format';
 import { useNotificationInbox } from './useNotificationInbox';
 
@@ -40,12 +42,16 @@ export function timeAgo(iso: string, now = Date.now()): string {
   return formatDate(iso);
 }
 
-/** Campana del encabezado: cuantas faltan leer y la lista de las ultimas. */
+/**
+ * Campana del encabezado: cuantas faltan leer y la lista de las ultimas. Cada aviso se puede borrar;
+ * los recordatorios de cobro traen el boton para mandarle el mensaje al cliente por WhatsApp.
+ */
 export function NotificationBell() {
-  const { inbox, markRead, markAll } = useNotificationInbox();
+  const { inbox, markRead, markAll, remove, removeRead } = useNotificationInbox();
   const [opened, setOpened] = useState(false);
   const navigate = useNavigate();
   const unread = inbox?.unreadCount ?? 0;
+  const hasRead = inbox?.items.some((n) => n.read) ?? false;
 
   const open = (n: AppNotification) => {
     if (!n.read) markRead.mutate(n.id);
@@ -81,18 +87,32 @@ export function NotificationBell() {
         </Indicator>
       </Popover.Target>
       <Popover.Dropdown p={0}>
-        <Group justify="space-between" px="sm" py="xs">
+        <Group justify="space-between" px="sm" py="xs" gap="xs">
           <Text fw={700}>Notificaciones</Text>
-          {unread > 0 && (
-            <Button
-              size="compact-xs"
-              variant="subtle"
-              onClick={() => markAll.mutate()}
-              loading={markAll.isPending}
-            >
-              Marcar todas como leídas
-            </Button>
-          )}
+          <Group gap={4}>
+            {unread > 0 && (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => markAll.mutate()}
+                loading={markAll.isPending}
+              >
+                Marcar leídas
+              </Button>
+            )}
+            {hasRead && (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                color="red"
+                leftSection={<IconTrash size={14} />}
+                onClick={() => removeRead.mutate()}
+                loading={removeRead.isPending}
+              >
+                Borrar leídas
+              </Button>
+            )}
+          </Group>
         </Group>
         <ScrollArea.Autosize mah={420}>
           {inbox && inbox.items.length === 0 && (
@@ -104,35 +124,56 @@ export function NotificationBell() {
             {inbox?.items.map((n) => {
               const look = LOOK[n.tone] ?? LOOK.INFO;
               return (
-                <UnstyledButton
+                <Group
                   key={n.id}
-                  onClick={() => open(n)}
-                  px="sm"
-                  py="xs"
+                  gap={4}
+                  wrap="nowrap"
+                  align="flex-start"
+                  pr={6}
                   style={{
                     borderTop: '1px solid var(--mantine-color-default-border)',
                     background: n.read ? undefined : 'var(--mantine-color-default-hover)',
                   }}
                 >
-                  <Group gap="sm" wrap="nowrap" align="flex-start">
-                    <ThemeIcon size={28} radius="xl" variant="light" color={look.color}>
-                      <look.icon size={16} />
-                    </ThemeIcon>
-                    <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-                      <Group justify="space-between" gap="xs" wrap="nowrap">
-                        <Text size="sm" fw={n.read ? 500 : 700} truncate>
-                          {n.title}
+                  <UnstyledButton onClick={() => open(n)} px="sm" py="xs" style={{ flex: 1 }}>
+                    <Group gap="sm" wrap="nowrap" align="flex-start">
+                      <ThemeIcon size={28} radius="xl" variant="light" color={look.color}>
+                        <look.icon size={16} />
+                      </ThemeIcon>
+                      <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                        <Group justify="space-between" gap="xs" wrap="nowrap">
+                          <Text size="sm" fw={n.read ? 500 : 700} truncate>
+                            {n.title}
+                          </Text>
+                          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                            {timeAgo(n.createdAt)}
+                          </Text>
+                        </Group>
+                        <Text size="xs" c={n.read ? 'dimmed' : undefined} lineClamp={3}>
+                          {n.message}
                         </Text>
-                        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                          {timeAgo(n.createdAt)}
-                        </Text>
-                      </Group>
-                      <Text size="xs" c={n.read ? 'dimmed' : undefined} lineClamp={3}>
-                        {n.message}
-                      </Text>
-                    </Stack>
-                  </Group>
-                </UnstyledButton>
+                      </Stack>
+                    </Group>
+                  </UnstyledButton>
+                  <Stack gap={4} py="xs">
+                    {n.whatsappUrl && (
+                      <WhatsAppIcon
+                        href={n.whatsappUrl}
+                        label="Mandar el recordatorio por WhatsApp"
+                        onOpen={() => !n.read && markRead.mutate(n.id)}
+                      />
+                    )}
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      aria-label="Borrar notificación"
+                      title="Borrar"
+                      onClick={() => remove.mutate(n.id)}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Stack>
+                </Group>
               );
             })}
           </Stack>

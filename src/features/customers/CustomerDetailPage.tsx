@@ -9,6 +9,7 @@ import { hasPermission, Permission } from '../../auth/permissions';
 import { LoanCard } from '../loans/LoansPage';
 import { isOpen } from '../loans/loanDraft';
 import { formatDate, formatMoneyShort } from '../../shared/format';
+import { CustomerActivityCard } from './CustomerActivityCard';
 import { ageAt } from './validators';
 
 export function CustomerDetailPage() {
@@ -88,6 +89,8 @@ export function CustomerDetailPage() {
               ))}
             </Stack>
           )}
+
+          <CustomerActivityCard customerId={c.id} />
 
           <Section title="Datos personales">
             <Row

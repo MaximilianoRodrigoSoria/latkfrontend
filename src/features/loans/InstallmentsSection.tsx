@@ -19,6 +19,7 @@ import type { InstallmentResponse, LoanResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission } from '../../auth/permissions';
 import { CollectionAccountCard } from '../settings/CollectionAccountCard';
+import { WhatsAppButton } from '../../shared/components/WhatsAppButton';
 import { formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { todayIso } from './loanDraft';
@@ -61,6 +62,9 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.loan(loan.id), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.loans });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.customerActivity(loan.customerId),
+      });
       modal.close();
       notifySuccess(
         action?.kind === 'collect'
@@ -108,6 +112,21 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
                 ? `Adelantar cuota ${next.number} · ${formatMoneyShort(next.amount)}`
                 : `Cobrar cuota ${next.number} · ${formatMoneyShort(next.amount)}`}
             </Button>
+          )}
+
+          {/* Recordatorio al cliente por WhatsApp: abre el chat con el mensaje ya escrito. */}
+          {next?.reminderUrl && (
+            <WhatsAppButton href={next.reminderUrl} variant="light" size="md">
+              {next.overdue
+                ? `Reclamar cuota ${next.number} por WhatsApp`
+                : `Recordar cuota ${next.number} por WhatsApp`}
+            </WhatsAppButton>
+          )}
+          {next && !next.reminderUrl && loan.status === 'DISBURSED' && (
+            <Text size="xs" c="dimmed">
+              Para mandar recordatorios por WhatsApp, cargá un celular con código de área en los
+              datos del cliente.
+            </Text>
           )}
 
           <Stack gap={0}>

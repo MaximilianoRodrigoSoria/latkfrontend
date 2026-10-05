@@ -8,7 +8,7 @@ import type { AppNotification, NotificationInbox } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { notify } from '../../shared/notify';
 import { NotificationBell, timeAgo } from './NotificationBell';
-import { freshNotifications, toneOf } from './useNotificationInbox';
+import { freshNotifications, toneOf, withoutItems } from './useNotificationInbox';
 
 vi.mock('../../shared/notify', () => ({ notify: vi.fn(), setNotifyNavigator: vi.fn() }));
 
@@ -27,6 +27,15 @@ describe('notificaciones: logica', () => {
   it('nuevas = no leidas y no vistas', () => {
     const fresh = freshNotifications([item('a'), item('b', true), item('c')], new Set(['a']));
     expect(fresh.map((n) => n.id)).toEqual(['c']);
+  });
+
+  it('sacar de la bandeja recalcula las no leidas', () => {
+    const inbox = { unreadCount: 2, items: [item('a'), item('b', true), item('c')] };
+    expect(withoutItems(inbox, (n) => n.id === 'a')).toEqual({
+      unreadCount: 1,
+      items: [item('b', true), item('c')].map((n) => ({ ...n, createdAt: expect.any(String) })),
+    });
+    expect(withoutItems(inbox, (n) => n.read).unreadCount).toBe(2);
   });
 
   it('tono y tiempo relativo', () => {
@@ -100,5 +109,27 @@ describe('NotificationBell', () => {
     await waitFor(() =>
       expect(vi.mocked(notify).mock.calls.some(([o]) => o.id === 'notification:b')).toBe(true),
     );
+  });
+
+  it('se puede borrar una y el recordatorio trae WhatsApp', async () => {
+    const remove = vi.spyOn(api, 'deleteNotification').mockResolvedValue(undefined);
+    inbox = {
+      unreadCount: 1,
+      items: [
+        { ...item('r'), type: 'INSTALLMENT_DUE_TODAY', whatsappUrl: 'https://wa.me/549?text=Hola' },
+      ],
+    };
+    renderBell();
+    fireEvent.click(await screen.findByRole('button', { name: 'Notificaciones: 1 sin leer' }));
+
+    const wa = await screen.findByRole('link', { name: 'Mandar el recordatorio por WhatsApp' });
+    expect(wa.getAttribute('href')).toBe('https://wa.me/549?text=Hola');
+    expect(wa.getAttribute('target')).toBe('_blank');
+
+    const trash = await screen.findByLabelText('Borrar notificación');
+    inbox = { unreadCount: 0, items: [] };
+    fireEvent.click(trash);
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('r'));
+    expect(await screen.findByText('No tenés notificaciones.')).toBeTruthy();
   });
 });
