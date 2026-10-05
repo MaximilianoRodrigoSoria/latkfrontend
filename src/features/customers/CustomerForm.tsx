@@ -16,7 +16,7 @@ import { useForm } from '@mantine/form';
 import { IconBuildingBank, IconHome, IconUser } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import type { CustomerRequest } from '../../api/types';
+import type { CustomerRequest, CustomerResponse } from '../../api/types';
 import {
   ageAt,
   bankFromCbu,
@@ -106,15 +106,52 @@ export function toCustomerRequest(v: CustomerFormValues): CustomerRequest {
   };
 }
 
+/** Datos actuales de un cliente para editarlos con el mismo formulario del alta. */
+export function fromCustomer(c: CustomerResponse): CustomerFormValues {
+  return {
+    firstName: c.firstName,
+    lastName: c.lastName,
+    dni: c.dni,
+    cuil: formatCuil(c.cuil),
+    birthDate: c.birthDate,
+    phone: c.phone,
+    email: c.email ?? '',
+    street: c.address.street,
+    number: c.address.number,
+    apartment: c.address.apartment ?? '',
+    city: c.address.city,
+    province: c.address.province,
+    postalCode: c.address.postalCode ?? '',
+    cbu: c.bankAccount.cbu,
+    alias: c.bankAccount.alias ?? '',
+    bankName: c.bankAccount.bankName ?? '',
+    occupation: c.occupation ?? '',
+    monthlyIncome: c.monthlyIncome ?? '',
+    notes: c.notes ?? '',
+  };
+}
+
 interface CustomerFormProps {
   submitting: boolean;
   onSubmit: (request: CustomerRequest) => void;
+  /** Edicion: datos actuales. DNI y CUIL quedan fijos (identifican a la persona). */
+  initial?: CustomerFormValues;
+  /** Edicion: nombre, apellido y nacimiento solo los corrige quien tiene permiso (admin). */
+  identityEditable?: boolean;
 }
 
-export function CustomerForm({ submitting, onSubmit }: CustomerFormProps) {
-  const [step, setStep] = useState(0);
+export function CustomerForm({
+  submitting,
+  onSubmit,
+  initial,
+  identityEditable = false,
+}: CustomerFormProps) {
+  const editing = initial !== undefined;
+  const lockIdentity = editing && !identityEditable;
+  // Al editar se abre en Contacto: es lo que mas cambia (telefono, domicilio).
+  const [step, setStep] = useState(editing ? 1 : 0);
   const form = useForm<CustomerFormValues>({
-    initialValues: EMPTY,
+    initialValues: initial ?? EMPTY,
     validate: {
       firstName: blank,
       lastName: blank,
@@ -145,28 +182,59 @@ export function CustomerForm({ submitting, onSubmit }: CustomerFormProps) {
     if (!errors.some(Boolean)) setStep((s) => s + 1);
   };
 
+  // Al guardar con errores en un paso que no se ve, se salta a ese paso.
+  const showFirstError = (errors: Partial<Record<keyof CustomerFormValues, unknown>>) => {
+    const index = STEP_FIELDS.findIndex((fields) => fields.some((f) => errors[f]));
+    if (index >= 0) setStep(index);
+  };
+
   const suggestions = form.values.cuil ? [] : suggestCuils(form.values.dni);
   const detectedBank = bankFromCbu(form.values.cbu);
 
   return (
-    <form onSubmit={form.onSubmit((values) => onSubmit(toCustomerRequest(values)))}>
-      <Stepper active={step} onStepClick={(s) => s < step && setStep(s)} size="sm" mb="md">
+    <form onSubmit={form.onSubmit((values) => onSubmit(toCustomerRequest(values)), showFirstError)}>
+      <Stepper
+        active={step}
+        onStepClick={(s) => (editing || s < step) && setStep(s)}
+        allowNextStepsSelect={editing}
+        size="sm"
+        mb="md"
+      >
         <Stepper.Step icon={<IconUser size={18} />} label="Persona">
           <Stack>
             <SimpleGrid cols={{ base: 1, xs: 2 }}>
-              <TextInput label="Nombre" autoComplete="off" {...form.getInputProps('firstName')} />
-              <TextInput label="Apellido" autoComplete="off" {...form.getInputProps('lastName')} />
+              <TextInput
+                label="Nombre"
+                autoComplete="off"
+                disabled={lockIdentity}
+                {...form.getInputProps('firstName')}
+              />
+              <TextInput
+                label="Apellido"
+                autoComplete="off"
+                disabled={lockIdentity}
+                {...form.getInputProps('lastName')}
+              />
             </SimpleGrid>
+            {editing && (
+              <Text size="xs" c="dimmed">
+                {lockIdentity
+                  ? 'Nombre, apellido y nacimiento los corrige el administrador. DNI y CUIL no se modifican.'
+                  : 'DNI y CUIL no se modifican: si es otra persona, dala de alta como cliente nuevo.'}
+              </Text>
+            )}
             <TextInput
               label="DNI"
               inputMode="numeric"
               placeholder="12345678"
+              disabled={editing}
               {...form.getInputProps('dni')}
             />
             <TextInput
               label="CUIL"
               inputMode="numeric"
               placeholder="20-12345678-6"
+              disabled={editing}
               {...form.getInputProps('cuil')}
               onChange={(e) => form.setFieldValue('cuil', formatCuil(e.currentTarget.value))}
             />
@@ -190,6 +258,7 @@ export function CustomerForm({ submitting, onSubmit }: CustomerFormProps) {
               valueFormat="DD/MM/YYYY"
               maxDate={dayjs().subtract(18, 'year').format('YYYY-MM-DD')}
               defaultDate={dayjs().subtract(30, 'year').format('YYYY-MM-DD')}
+              disabled={lockIdentity}
               {...form.getInputProps('birthDate')}
             />
           </Stack>
@@ -273,20 +342,26 @@ export function CustomerForm({ submitting, onSubmit }: CustomerFormProps) {
         </Stepper.Step>
       </Stepper>
 
-      <Group grow>
-        {step > 0 && (
-          <Button variant="default" onClick={() => setStep((s) => s - 1)}>
-            Atras
-          </Button>
-        )}
-        {step < 2 ? (
-          <Button onClick={next}>Siguiente</Button>
-        ) : (
-          <Button type="submit" loading={submitting}>
-            Dar de alta
-          </Button>
-        )}
-      </Group>
+      {editing ? (
+        <Button type="submit" fullWidth loading={submitting} disabled={!form.isDirty()}>
+          Guardar cambios
+        </Button>
+      ) : (
+        <Group grow>
+          {step > 0 && (
+            <Button variant="default" onClick={() => setStep((s) => s - 1)}>
+              Atras
+            </Button>
+          )}
+          {step < 2 ? (
+            <Button onClick={next}>Siguiente</Button>
+          ) : (
+            <Button type="submit" loading={submitting}>
+              Dar de alta
+            </Button>
+          )}
+        </Group>
+      )}
     </form>
   );
 }

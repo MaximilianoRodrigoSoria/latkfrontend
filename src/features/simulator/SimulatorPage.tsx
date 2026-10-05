@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
 import type { SimulationResponse } from '../../api/types';
+import { useAuthStore } from '../../auth/authStore';
+import { isSeller } from '../../auth/permissions';
 import { PageHeader } from '../../shared/components/PageHeader';
 import {
   formatDate,
@@ -115,6 +117,8 @@ export function SimulatorPage() {
 }
 
 function SimulationResult({ result }: { result: SimulationResponse }) {
+  // El grafico de capital e interes es para el admin; el vendedor ve solo cuotas y totales.
+  const showBreakdown = !isSeller(useAuthStore((s) => s.user));
   const chartData = useMemo(
     () =>
       result.schedule.map((row) => ({
@@ -138,23 +142,25 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
         <Stat label="Interes total" value={formatMoney(result.totalInterest)} />
       </SimpleGrid>
 
-      <Card withBorder>
-        <Text fw={600} mb="sm">
-          Capital e interes por cuota
-        </Text>
-        <BarChart
-          h={220}
-          data={chartData}
-          dataKey="cuota"
-          type="stacked"
-          series={[
-            { name: 'Capital', color: 'brand.6' },
-            { name: 'Interes', color: 'accent.5' },
-          ]}
-          valueFormatter={formatMoneyShort}
-          withLegend
-        />
-      </Card>
+      {showBreakdown && (
+        <Card withBorder>
+          <Text fw={600} mb="sm">
+            Capital e interes por cuota
+          </Text>
+          <BarChart
+            h={220}
+            data={chartData}
+            dataKey="cuota"
+            type="stacked"
+            series={[
+              { name: 'Capital', color: 'brand.6' },
+              { name: 'Interes', color: 'accent.5' },
+            ]}
+            valueFormatter={formatMoneyShort}
+            withLegend
+          />
+        </Card>
+      )}
 
       {/* Celular: tarjetas compactas. Escritorio: tabla completa. */}
       <Stack gap="xs" hiddenFrom="sm">

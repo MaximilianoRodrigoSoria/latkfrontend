@@ -80,4 +80,13 @@ describe('sellerForm', () => {
       bankAccount: { cbu: '0000003100010000000001', alias: 'MARTA.MP', bankName: null },
     });
   });
+
+  it('el CBU es opcional: vacio no se valida ni se envia; cargado se valida', () => {
+    const rules = sellerValidation('create');
+    const noCbu = { ...filled, cbu: '', alias: '' };
+    expect(rules.cbu('')).toBeNull();
+    expect(toNewSellerRequest(noCbu).data.bankAccount).toBeNull();
+    expect(rules.cbu('123')).not.toBeNull();
+    expect(rules.alias('MARTA.MP', noCbu)).toMatch(/CBU/);
+  });
 });

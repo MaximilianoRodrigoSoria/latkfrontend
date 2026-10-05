@@ -1,14 +1,35 @@
-import { Anchor, Badge, Button, Card, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { IconArrowLeft, IconBrandWhatsapp, IconCashPlus, IconPhone } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  Anchor,
+  Badge,
+  Button,
+  Card,
+  Drawer,
+  Group,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import { useDisclosure, useMediaQuery } from '@mantine/hooks';
+import {
+  IconArrowLeft,
+  IconBrandWhatsapp,
+  IconCashPlus,
+  IconPencil,
+  IconPhone,
+} from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
+import type { CustomerRequest } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
 import { LoanCard } from '../loans/LoansPage';
 import { isOpen } from '../loans/loanDraft';
 import { formatDate, formatMoneyShort } from '../../shared/format';
+import { notifyError, notifySuccess } from '../../shared/notify';
+import { CustomerForm, fromCustomer } from './CustomerForm';
 import { CustomerActivityCard } from './CustomerActivityCard';
 import { ageAt } from './validators';
 
@@ -21,6 +42,29 @@ export function CustomerDetailPage() {
   const loans = useQuery({ queryKey: queryKeys.loans, queryFn: api.loans });
   const customerLoans = loans.data?.filter((l) => l.customerId === id) ?? [];
   const hasOpenLoan = customerLoans.some((l) => isOpen(l.status));
+  const canEdit = hasPermission(user, Permission.CUSTOMER_UPDATE);
+  const [editing, editor] = useDisclosure(false);
+  const mobile = useMediaQuery('(max-width: 48em)');
+  const queryClient = useQueryClient();
+
+  const update = useMutation({
+    mutationFn: (request: CustomerRequest) =>
+      api.updateCustomer(id, { version: c!.version, data: request }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.customer(id), updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerActivity(id) });
+      void queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Los recordatorios de WhatsApp de sus prestamos usan el telefono nuevo.
+      void queryClient.invalidateQueries({ queryKey: ['loan'] });
+      editor.close();
+      notifySuccess('Datos del cliente actualizados');
+    },
+    onError: (error) => {
+      notifyError(error);
+      // 409: otro lo cambio mientras tanto; se recargan los datos actuales.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customer(id) });
+    },
+  });
 
   return (
     <Stack>
@@ -35,14 +79,26 @@ export function CustomerDetailPage() {
 
       {c && (
         <>
-          <Stack gap={2}>
-            <Title order={2} size="h3">
-              {c.firstName} {c.lastName}
-            </Title>
-            <Text c="dimmed" size="sm">
-              DNI {c.dni} · CUIL {c.cuil}
-            </Text>
-          </Stack>
+          <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <Stack gap={2}>
+              <Title order={2} size="h3">
+                {c.firstName} {c.lastName}
+              </Title>
+              <Text c="dimmed" size="sm">
+                DNI {c.dni} · CUIL {c.cuil}
+              </Text>
+            </Stack>
+            {canEdit && (
+              <Button
+                variant="light"
+                size="sm"
+                leftSection={<IconPencil size={16} />}
+                onClick={editor.open}
+              >
+                Editar
+              </Button>
+            )}
+          </Group>
 
           <Group grow>
             <Button
@@ -137,6 +193,24 @@ export function CustomerDetailPage() {
           <Text size="xs" c="dimmed">
             Alta: {formatDate(c.createdAt)}
           </Text>
+
+          <Drawer
+            opened={editing}
+            onClose={editor.close}
+            title={`Editar ${c.firstName} ${c.lastName}`}
+            position={mobile ? 'bottom' : 'right'}
+            size={mobile ? '94%' : 'lg'}
+            radius={mobile ? 'lg' : 0}
+          >
+            {editing && (
+              <CustomerForm
+                initial={fromCustomer(c)}
+                identityEditable={hasPermission(user, Permission.CUSTOMER_IDENTITY_FIX)}
+                submitting={update.isPending}
+                onSubmit={(request) => update.mutate(request)}
+              />
+            )}
+          </Drawer>
         </>
       )}
     </Stack>

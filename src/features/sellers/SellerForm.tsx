@@ -129,10 +129,10 @@ export function SellerForm({ mode, initial, submitting, submitLabel, onSubmit }:
 
         <Section
           title={mode === 'self' ? 'Mi cuenta para cobrar' : 'Cuenta del vendedor'}
-          hint="Donde se le transfieren las comisiones"
+          hint="Donde se le transfieren las comisiones. Opcional: se puede cargar después"
         >
           <TextInput
-            label="CBU / CVU"
+            label="CBU / CVU (opcional)"
             inputMode="numeric"
             placeholder="22 dígitos"
             description={detectedBank ?? undefined}

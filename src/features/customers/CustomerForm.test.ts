@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { toCustomerRequest, type CustomerFormValues } from './CustomerForm';
+import type { CustomerResponse } from '../../api/types';
+import { fromCustomer, toCustomerRequest, type CustomerFormValues } from './CustomerForm';
 
 describe('toCustomerRequest', () => {
   it('limpia formatos y convierte vacios en null', () => {
@@ -39,5 +40,55 @@ describe('toCustomerRequest', () => {
       bankName: 'Banco Macro',
     });
     expect(request.monthlyIncome).toBeNull();
+  });
+});
+
+describe('edicion de cliente', () => {
+  it('los datos actuales vuelven igual al backend si no se toca nada', () => {
+    const current: CustomerResponse = {
+      id: 'c1',
+      sellerId: 's1',
+      firstName: 'Sergio',
+      lastName: 'Ledesma',
+      dni: '36433709',
+      cuil: '20-36433709-5',
+      birthDate: '1988-06-15',
+      phone: '1150001004',
+      email: null,
+      address: {
+        street: 'Sarmiento',
+        number: '77',
+        apartment: null,
+        city: 'Remedios de Escalada',
+        province: 'Buenos Aires',
+        postalCode: null,
+      },
+      bankAccount: {
+        cbu: '2850590900044000237576',
+        alias: null,
+        bankName: 'Banco Macro',
+        virtual: false,
+      },
+      occupation: 'Electricista',
+      monthlyIncome: 1400000,
+      notes: null,
+      createdAt: '2026-10-05T12:00:00Z',
+      version: 3,
+    };
+
+    expect(toCustomerRequest(fromCustomer(current))).toEqual({
+      firstName: 'Sergio',
+      lastName: 'Ledesma',
+      dni: '36433709',
+      cuil: '20364337095',
+      birthDate: '1988-06-15',
+      phone: '1150001004',
+      email: null,
+      address: current.address,
+      bankAccount: { cbu: '2850590900044000237576', alias: null, bankName: 'Banco Macro' },
+      occupation: 'Electricista',
+      monthlyIncome: 1400000,
+      notes: null,
+    });
   });
 });

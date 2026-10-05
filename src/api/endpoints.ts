@@ -5,6 +5,7 @@ import type {
   CustomerRequest,
   CustomerResponse,
   CustomerSummary,
+  CustomerUpdateRequest,
   EarningsResponse,
   LoanRequestBody,
   LoanResponse,
@@ -59,6 +60,8 @@ export const api = {
   customer: (id: string) => request<CustomerResponse>(`/api/v1/customers/${id}`),
   createCustomer: (body: CustomerRequest) =>
     request<CustomerResponse>('/api/v1/customers', { method: 'POST', body }),
+  updateCustomer: (id: string, body: CustomerUpdateRequest) =>
+    request<CustomerResponse>(`/api/v1/customers/${id}`, { method: 'PUT', body }),
 
   loans: () => request<LoanResponse[]>('/api/v1/loans'),
   loan: (id: string) => request<LoanResponse>(`/api/v1/loans/${id}`),

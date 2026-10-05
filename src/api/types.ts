@@ -137,6 +137,13 @@ export interface CustomerResponse extends Omit<CustomerRequest, 'bankAccount'> {
   sellerId: string;
   bankAccount: { cbu: string; alias: string | null; bankName: string | null; virtual: boolean };
   createdAt: string;
+  /** Se reenvia al modificar: si otro lo cambio antes, el backend responde 409. */
+  version: number;
+}
+
+export interface CustomerUpdateRequest {
+  version: number;
+  data: CustomerRequest;
 }
 
 export interface CustomerSummary {
@@ -273,7 +280,8 @@ export interface SellerContactRequest {
   phone: string;
   email: string | null;
   address: SellerAddress | null;
-  bankAccount: SellerBankAccount;
+  /** Opcional: sin cuenta el perfil figura incompleto hasta cargarla. */
+  bankAccount: SellerBankAccount | null;
 }
 
 /** Edicion completa por el administrador. */
@@ -392,6 +400,8 @@ export interface PortfolioStats {
 }
 
 export type CustomerActivityType =
+  | 'CUSTOMER_REGISTERED'
+  | 'CUSTOMER_UPDATED'
   | 'LOAN_REQUESTED'
   | 'LOAN_AUTO_APPROVED'
   | 'LOAN_APPROVED'
@@ -405,13 +415,14 @@ export type CustomerActivityType =
 export interface CustomerActivity {
   at: string;
   type: CustomerActivityType;
-  loanId: string;
+  /** Ausente en el alta y las modificaciones del cliente. */
+  loanId?: string | null;
   productName?: string | null;
   installmentNumber?: number | null;
   amount?: number | null;
   /** Ausente si fue automatico. */
   actorName?: string | null;
-  /** Motivo de rechazo o reversion, referencia de la transferencia, notas. */
+  /** Motivo, referencia, notas o, en modificaciones, una linea por campo cambiado. */
   detail?: string | null;
   advance: boolean;
 }

@@ -8,6 +8,8 @@ import {
   IconCircleCheck,
   IconFileText,
   IconSend,
+  IconUserEdit,
+  IconUserPlus,
   type Icon,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +22,8 @@ import { formatDateTime, formatMoneyShort } from '../../shared/format';
 const PAGE = 8;
 
 const LOOK: Record<CustomerActivityType, { color: string; icon: Icon }> = {
+  CUSTOMER_REGISTERED: { color: 'brand', icon: IconUserPlus },
+  CUSTOMER_UPDATED: { color: 'violet', icon: IconUserEdit },
   LOAN_REQUESTED: { color: 'brand', icon: IconFileText },
   LOAN_AUTO_APPROVED: { color: 'teal', icon: IconBolt },
   LOAN_APPROVED: { color: 'teal', icon: IconCheck },
@@ -34,6 +38,10 @@ const LOOK: Record<CustomerActivityType, { color: string; icon: Icon }> = {
 export function activityTitle(a: CustomerActivity): string {
   const amount = a.amount != null ? ` · ${formatMoneyShort(a.amount)}` : '';
   switch (a.type) {
+    case 'CUSTOMER_REGISTERED':
+      return 'Cliente dado de alta';
+    case 'CUSTOMER_UPDATED':
+      return 'Datos del cliente actualizados';
     case 'LOAN_REQUESTED':
       return `Préstamo solicitado${amount}`;
     case 'LOAN_AUTO_APPROVED':
@@ -62,6 +70,7 @@ export function activityDetail(a: CustomerActivity): string | null {
     case 'LOAN_REQUESTED':
       return `Notas: ${a.detail}`;
     case 'LOAN_AUTO_APPROVED':
+    case 'CUSTOMER_UPDATED':
       return a.detail;
     default:
       return `Motivo: ${a.detail}`;
@@ -123,16 +132,21 @@ export function CustomerActivityCard({ customerId }: { customerId: string }) {
                 }
               >
                 <Text size="xs" c="dimmed">
-                  {formatDateTime(a.at)} · {a.actorName ?? 'Automático'}
-                  {a.productName ? ' · ' : ''}
-                  {a.productName && (
+                  {formatDateTime(a.at)}
+                  {a.actorName
+                    ? ` · ${a.actorName}`
+                    : a.type === 'LOAN_AUTO_APPROVED'
+                      ? ' · Automático'
+                      : ''}
+                  {a.productName && a.loanId ? ' · ' : ''}
+                  {a.productName && a.loanId && (
                     <Text span inherit component={Link} to={`/loans/${a.loanId}`} c="brand">
                       {a.productName}
                     </Text>
                   )}
                 </Text>
                 {detail && (
-                  <Text size="sm" mt={2}>
+                  <Text size="sm" mt={2} style={{ whiteSpace: 'pre-line' }}>
                     {detail}
                   </Text>
                 )}

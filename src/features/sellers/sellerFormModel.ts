@@ -98,7 +98,10 @@ export function toContactRequest(v: SellerFormValues): SellerContactRequest {
     phone: onlyDigits(v.phone),
     email: orNull(v.email),
     address: address(v),
-    bankAccount: { cbu: onlyDigits(v.cbu), alias: orNull(v.alias), bankName: orNull(v.bankName) },
+    // La cuenta es opcional: sin CBU no se manda (se puede cargar despues).
+    bankAccount: onlyDigits(v.cbu)
+      ? { cbu: onlyDigits(v.cbu), alias: orNull(v.alias), bankName: orNull(v.bankName) }
+      : null,
   };
 }
 
@@ -141,11 +144,16 @@ export function sellerValidation(mode: SellerFormMode) {
     city: (v: string, values: SellerFormValues) => (hasAddress(values) ? blank(v) : null),
     province: (v: string | null, values: SellerFormValues) =>
       hasAddress(values) && !v ? 'Obligatorio' : null,
-    cbu: validateCbu,
-    alias: (v: string) =>
-      !v.trim() || /^[A-Za-z0-9.-]{6,20}$/.test(v.trim())
+    // Opcional; si se carga tiene que ser valido.
+    cbu: (v: string) => (onlyDigits(v) ? validateCbu(v) : null),
+    alias: (v: string, values: SellerFormValues) =>
+      !v.trim()
         ? null
-        : '6 a 20 caracteres: letras, números, punto o guion',
+        : !onlyDigits(values.cbu)
+          ? 'Cargá el CBU/CVU para usar alias'
+          : /^[A-Za-z0-9.-]{6,20}$/.test(v.trim())
+            ? null
+            : '6 a 20 caracteres: letras, números, punto o guion',
     username: (v: string) =>
       mode !== 'create' || /^[A-Za-z0-9._-]{3,64}$/.test(v.trim())
         ? null

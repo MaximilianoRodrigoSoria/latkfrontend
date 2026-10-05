@@ -15,6 +15,8 @@ export const Permission = {
   DASHBOARD_READ: 'dashboard.read',
   COMMISSION_READ_OWN: 'commission.read.own',
   CUSTOMER_CREATE: 'customer.create',
+  CUSTOMER_UPDATE: 'customer.update',
+  CUSTOMER_IDENTITY_FIX: 'customer.identity.fix',
   LOAN_REQUEST: 'loan.request',
   LOAN_APPROVE: 'loan.approve',
   DISBURSEMENT_REGISTER: 'disbursement.register',
