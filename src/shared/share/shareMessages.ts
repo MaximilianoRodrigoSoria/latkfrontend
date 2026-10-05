@@ -1,27 +1,25 @@
-import type { OfferOption, PaymentFrequency, SimulationResponse } from '../../api/types';
+import type { SimulationResponse } from '../../api/types';
 import { formatDate, formatMoneyShort, PERIOD_LABEL } from '../format';
 
 /**
- * Textos para compartir con el cliente: SOLO la lista de cuotas. Nunca la ganancia ni el
- * porcentaje del vendedor.
+ * Textos para compartir con el cliente por WhatsApp: monto, cuotas y total a devolver, con un tono
+ * cercano. Nunca la tasa, la ganancia ni el porcentaje del vendedor.
  */
 export function simulationMessage(result: SimulationResponse): string {
-  return result.schedule
-    .map(
-      (row) => `Cuota ${row.number} · ${formatDate(row.dueDate)} · ${formatMoneyShort(row.amount)}`,
-    )
-    .join('\n');
-}
-
-export function offerMessage(
-  frequency: PaymentFrequency,
-  options: Pick<OfferOption, 'installments' | 'installmentAmount'>[],
-): string {
-  return [...options]
-    .sort((a, b) => a.installments - b.installments)
-    .map(
-      (o) =>
-        `${o.installments} cuotas ${PERIOD_LABEL[frequency]}es de ${formatMoneyShort(o.installmentAmount)}`,
-    )
-    .join('\n');
+  const period = PERIOD_LABEL[result.frequency];
+  const cuotas = result.schedule.map(
+    (row) => `• Cuota ${row.number} · ${formatDate(row.dueDate)} · ${formatMoneyShort(row.amount)}`,
+  );
+  return [
+    '¡Hola! 👋 Te paso la propuesta de tu préstamo:',
+    '',
+    `💵 Te prestamos: *${formatMoneyShort(result.principal)}*`,
+    `📅 ${result.installments} cuotas ${period}es de *${formatMoneyShort(result.installmentAmount)}*`,
+    `🧾 Total a devolver: ${formatMoneyShort(result.totalToRepay)}`,
+    '',
+    'Así quedan las cuotas:',
+    ...cuotas,
+    '',
+    'Si te sirve, avisame y lo dejamos listo. ¡Gracias por confiar en nosotros! 😊',
+  ].join('\n');
 }

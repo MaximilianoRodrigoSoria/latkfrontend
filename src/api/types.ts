@@ -29,7 +29,9 @@ export interface ProductRequest {
   validTo?: string | null;
 }
 
-export interface ProductResponse extends Required<ProductRequest> {
+export interface ProductResponse extends Omit<Required<ProductRequest>, 'ratePerPeriod'> {
+  /** Ausente para vendedores: no ven la tasa. */
+  ratePerPeriod?: number;
   id: string;
   active: boolean;
   availableToday: boolean;
@@ -54,7 +56,8 @@ export interface InstallmentView {
 
 export interface SimulationResponse {
   principal: number;
-  ratePerPeriod: number;
+  /** Ausente para vendedores: no ven la tasa. */
+  ratePerPeriod?: number;
   frequency: PaymentFrequency;
   installments: number;
   installmentAmount: number;
@@ -78,7 +81,8 @@ export interface ProductOffer {
   productId: string;
   productName: string;
   frequency: PaymentFrequency;
-  ratePerPeriod: number;
+  /** Ausente para vendedores: no ven la tasa. */
+  ratePerPeriod?: number;
   options: OfferOption[];
 }
 
@@ -207,7 +211,8 @@ export interface LoanResponse {
   customerDni: string | null;
   productName: string;
   frequency: PaymentFrequency;
-  ratePerPeriod: number;
+  /** Ausente para vendedores: no ven la tasa. */
+  ratePerPeriod?: number;
   principal: number;
   installments: number;
   installmentAmount: number;

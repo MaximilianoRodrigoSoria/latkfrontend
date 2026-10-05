@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SimulationResponse } from '../../api/types';
-import { offerMessage, simulationMessage } from './shareMessages';
+import { simulationMessage } from './shareMessages';
 
 const result: SimulationResponse = {
   principal: 100000,
@@ -33,20 +33,14 @@ const result: SimulationResponse = {
 const norm = (s: string) => s.replace(/\u00a0/g, ' ');
 
 describe('shareMessages', () => {
-  it('la simulacion comparte solo la lista de cuotas', () => {
-    expect(norm(simulationMessage(result))).toBe(
-      'Cuota 1 · 05/11/2026 · $ 53.020\nCuota 2 · 05/12/2026 · $ 53.020',
-    );
-  });
-
-  it('la oferta comparte solo las opciones de cuotas, ordenadas', () => {
-    expect(
-      norm(
-        offerMessage('WEEKLY', [
-          { installments: 6, installmentAmount: 18460 },
-          { installments: 4, installmentAmount: 26910 },
-        ]),
-      ),
-    ).toBe('4 cuotas semanales de $ 26.910\n6 cuotas semanales de $ 18.460');
+  it('la simulacion lleva saludo, monto, cuotas, total y la lista de vencimientos', () => {
+    const text = norm(simulationMessage(result));
+    expect(text).toContain('¡Hola!');
+    expect(text).toContain('Te prestamos: *$ 100.000*');
+    expect(text).toContain('2 cuotas mensuales de *$ 53.020*');
+    expect(text).toContain('Total a devolver: $ 106.040');
+    expect(text).toContain('• Cuota 1 · 05/11/2026 · $ 53.020\n• Cuota 2 · 05/12/2026 · $ 53.020');
+    // Nunca la tasa ni el interes.
+    expect(text).not.toMatch(/tasa|inter[eé]s|%/i);
   });
 });

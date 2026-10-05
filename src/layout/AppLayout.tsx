@@ -52,8 +52,11 @@ export function AppLayout() {
 
   const barItems = items.filter((item) => !item.menuOnly);
   const menuItems = items.filter((item) => item.menuOnly);
-  const isActive = (to: string) =>
-    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+  const isActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    const item = items.find((i) => i.to === to);
+    return [to, ...(item?.matches ?? [])].some((path) => location.pathname.startsWith(path));
+  };
 
   const logout = () => {
     signOut();

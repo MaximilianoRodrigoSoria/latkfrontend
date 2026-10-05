@@ -90,7 +90,7 @@ export function QuotaCard({ quota, title }: { quota: Quota; title?: string }) {
         <Text size="xs" c="dimmed">
           {quota.fullyRepaid
             ? `¡Se cobró todo lo prestado en ${month}!`
-            : 'Cuotas cobradas de los préstamos del mes (capital + interés).'}
+            : 'Cuotas cobradas de los préstamos que diste este mes.'}
         </Text>
       </Stack>
     </Card>

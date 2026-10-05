@@ -16,7 +16,6 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { DelinquencyLevel, LoanStatus, PortfolioStats } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
-import { PageHeader } from '../../shared/components/PageHeader';
 import { formatMoneyShort } from '../../shared/format';
 import { STATUS_COLOR, STATUS_LABEL } from '../loans/loanDraft';
 
@@ -40,7 +39,8 @@ export function shortMonth(yearMonth: string): string {
 }
 
 /** Indicadores: el admin ve toda la cartera y el detalle por vendedor; el vendedor, lo suyo. */
-export function StatsPage() {
+/** Indicadores de la cartera (sin titulo): el admin ve todo y el detalle por vendedor; el vendedor, lo suyo. */
+export function PortfolioStatsPanel() {
   const user = useAuthStore((s) => s.user);
   const seesAll = hasPermission(user, Permission.LOAN_READ_ALL);
   const stats = useQuery({
@@ -51,15 +51,11 @@ export function StatsPage() {
   const s = stats.data;
 
   return (
-    <Stack>
-      <PageHeader
-        title="Estadísticas"
-        description={seesAll ? 'Toda la cartera' : 'Tu cartera de préstamos'}
-      />
+    <>
       {stats.isLoading && <Skeleton h={400} />}
       {stats.isError && <Text c="red">{stats.error.message}</Text>}
       {s && <StatsView stats={s} seesAll={seesAll} />}
-    </Stack>
+    </>
   );
 }
 

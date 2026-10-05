@@ -1,12 +1,10 @@
 import {
-  IconChartBar,
   IconBuildingBank,
   IconId,
   IconUserDollar,
   IconCash,
   IconCoin,
   IconHome,
-  IconPackage,
   IconPalette,
   IconUsers,
   type Icon,
@@ -23,9 +21,12 @@ export interface NavItem {
   sellerOnly?: boolean;
   /** Va en el menu del usuario (y en el lateral de escritorio), no en la barra inferior. */
   menuOnly?: boolean;
+  /** Otras rutas de la misma seccion: el item queda marcado tambien en ellas. */
+  matches?: string[];
 }
 
-// El simulador sale de la barra (5 items como maximo en celular); se abre desde Inicio.
+// Barra corta (4 items): Inicio muestra las estadisticas y Prestamos agrupa la lista, el simulador
+// y los productos en pestanas.
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Inicio', icon: IconHome },
   {
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Préstamos',
     icon: IconCash,
     permissions: [Permission.LOAN_READ_OWN, Permission.LOAN_READ_ALL],
+    matches: ['/simulator', '/products'],
   },
   {
     to: '/earnings',
@@ -52,19 +54,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Vendedores',
     icon: IconUserDollar,
     permissions: [Permission.SELLER_MANAGE],
-  },
-  {
-    to: '/products',
-    label: 'Productos',
-    icon: IconPackage,
-    permissions: [Permission.PRODUCT_READ],
-  },
-  {
-    to: '/stats',
-    label: 'Estadísticas',
-    icon: IconChartBar,
-    permissions: [Permission.DASHBOARD_READ],
-    menuOnly: true,
   },
   {
     to: '/profile',

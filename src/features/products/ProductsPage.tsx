@@ -22,6 +22,7 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { OfferOption, ProductResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission } from '../../auth/permissions';
+import { LoansSectionTabs } from '../loans/LoansSectionTabs';
 import { PageHeader } from '../../shared/components/PageHeader';
 import {
   FREQUENCY_LABEL,
@@ -49,6 +50,7 @@ export function ProductsPage() {
 
   return (
     <Stack pb={canManage ? 88 : 0}>
+      <LoansSectionTabs />
       <PageHeader
         title="Productos"
         description={
@@ -158,9 +160,11 @@ function OffersView() {
               <Text fw={800} size="lg">
                 {offer.productName}
               </Text>
-              <Text size="xs" c="dimmed">
-                Tasa {formatRate(offer.ratePerPeriod)} {PERIOD_LABEL[offer.frequency]}
-              </Text>
+              {offer.ratePerPeriod != null && (
+                <Text size="xs" c="dimmed">
+                  Tasa {formatRate(offer.ratePerPeriod)} {PERIOD_LABEL[offer.frequency]}
+                </Text>
+              )}
             </Group>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
               {amountsOf(offer.options).map((amount) => (
@@ -311,8 +315,9 @@ function ProductCard({ product, toggling, onToggle }: ProductCardProps) {
       </Group>
       <Stack gap={4}>
         <Text size="sm">
-          {FREQUENCY_LABEL[product.frequency]} · {formatRate(product.ratePerPeriod)}{' '}
-          {PERIOD_LABEL[product.frequency]}
+          {FREQUENCY_LABEL[product.frequency]}
+          {product.ratePerPeriod != null &&
+            ` · ${formatRate(product.ratePerPeriod)} ${PERIOD_LABEL[product.frequency]}`}
         </Text>
         <Text size="sm" c="dimmed">
           Montos: {product.allowedAmounts.map(formatMoneyShort).join(' · ')}

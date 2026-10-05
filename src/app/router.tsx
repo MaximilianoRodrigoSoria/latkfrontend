@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { LoginPage } from '../auth/LoginPage';
 import { RequireAnyPermission, RequireAuth, RequirePermission } from '../auth/RequireAuth';
 import { Permission } from '../auth/permissions';
@@ -49,9 +49,6 @@ const CollectionAccountPage = lazy(() =>
   import('../features/settings/CollectionAccountPage').then((m) => ({
     default: m.CollectionAccountPage,
   })),
-);
-const StatsPage = lazy(() =>
-  import('../features/stats/StatsPage').then((m) => ({ default: m.StatsPage })),
 );
 const ThemeSettingsPage = lazy(() =>
   import('../features/settings/ThemeSettingsPage').then((m) => ({ default: m.ThemeSettingsPage })),
@@ -165,12 +162,9 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // Las estadisticas viven en Inicio; se mantiene la ruta por links viejos.
         path: 'stats',
-        element: (
-          <RequirePermission permission={Permission.DASHBOARD_READ}>
-            <StatsPage />
-          </RequirePermission>
-        ),
+        element: <Navigate to="/" replace />,
       },
       {
         path: 'settings/theme',

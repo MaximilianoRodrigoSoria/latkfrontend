@@ -22,6 +22,7 @@ import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { FREQUENCY_LABEL, formatDate, formatMoneyShort } from '../../shared/format';
+import { LoansSectionTabs } from './LoansSectionTabs';
 import { STATUS_COLOR, STATUS_LABEL, todayIso } from './loanDraft';
 
 type StatusFilter = 'ALL' | LoanStatus;
@@ -49,6 +50,7 @@ export function LoansPage() {
 
   return (
     <Stack pb={canRequest && mobile ? 88 : 0}>
+      <LoansSectionTabs />
       <PageHeader
         title="Préstamos"
         description={

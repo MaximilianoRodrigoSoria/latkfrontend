@@ -1,8 +1,6 @@
 import { Badge, Card, Group, Table, Text } from '@mantine/core';
 import type { OfferOption, PaymentFrequency } from '../../api/types';
 import { FREQUENCY_LABEL, formatMoney, formatMoneyShort } from '../../shared/format';
-import { ShareButton } from '../../shared/share/ShareButton';
-import { offerMessage } from '../../shared/share/shareMessages';
 
 interface LoanAmountCardProps {
   frequency: PaymentFrequency;
@@ -35,12 +33,6 @@ export function LoanAmountCard({ frequency, amount, options, earnings }: LoanAmo
         </Group>
         <Group gap={4} wrap="nowrap">
           <Badge variant="light">{FREQUENCY_LABEL[frequency]}</Badge>
-          {/* Se comparten solo los valores del cliente: nunca la ganancia. */}
-          <ShareButton
-            labeled={false}
-            title={`Préstamo de ${formatMoneyShort(amount)}`}
-            text={() => offerMessage(frequency, options)}
-          />
         </Group>
       </Group>
 

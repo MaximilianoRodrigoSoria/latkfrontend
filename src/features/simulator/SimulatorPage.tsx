@@ -9,6 +9,7 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { SimulationResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { isSeller } from '../../auth/permissions';
+import { LoansSectionTabs } from '../loans/LoansSectionTabs';
 import { PageHeader } from '../../shared/components/PageHeader';
 import {
   formatDate,
@@ -47,6 +48,7 @@ export function SimulatorPage() {
 
   return (
     <Stack>
+      <LoansSectionTabs />
       <PageHeader title="Simulador" description="Plan de cuotas con sistema frances" />
       <Paper withBorder p="md">
         <Stack>
@@ -58,7 +60,8 @@ export function SimulatorPage() {
             onChange={selectProduct}
             nothingFoundMessage="No hay productos disponibles"
           />
-          {product && (
+          {/* La tasa solo llega para el admin: el vendedor no la ve. */}
+          {product?.ratePerPeriod != null && (
             <Text size="sm" c="dimmed">
               Tasa {formatRate(product.ratePerPeriod)} {PERIOD_LABEL[product.frequency]}
             </Text>
@@ -117,7 +120,7 @@ export function SimulatorPage() {
 }
 
 function SimulationResult({ result }: { result: SimulationResponse }) {
-  // El grafico de capital e interes es para el admin; el vendedor ve solo cuotas y totales.
+  // Capital, interes y tasa son para el admin; el vendedor ve monto, cuotas y totales.
   const showBreakdown = !isSeller(useAuthStore((s) => s.user));
   const chartData = useMemo(
     () =>
@@ -139,7 +142,11 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
         <Stat label="Cuota" value={formatMoney(result.installmentAmount)} highlight />
         <Stat label="Cuotas" value={`${result.installments} ${PERIOD_LABEL[result.frequency]}es`} />
         <Stat label="Total a devolver" value={formatMoney(result.totalToRepay)} />
-        <Stat label="Interes total" value={formatMoney(result.totalInterest)} />
+        {showBreakdown ? (
+          <Stat label="Interes total" value={formatMoney(result.totalInterest)} />
+        ) : (
+          <Stat label="Monto prestado" value={formatMoney(result.principal)} />
+        )}
       </SimpleGrid>
 
       {showBreakdown && (
@@ -188,8 +195,8 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
               <Table.Th>#</Table.Th>
               <Table.Th>Vencimiento</Table.Th>
               <Table.Th ta="right">Cuota</Table.Th>
-              <Table.Th ta="right">Capital</Table.Th>
-              <Table.Th ta="right">Interes</Table.Th>
+              {showBreakdown && <Table.Th ta="right">Capital</Table.Th>}
+              {showBreakdown && <Table.Th ta="right">Interes</Table.Th>}
               <Table.Th ta="right">Saldo</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -199,8 +206,8 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
                 <Table.Td>{row.number}</Table.Td>
                 <Table.Td>{formatDate(row.dueDate)}</Table.Td>
                 <Table.Td ta="right">{formatMoney(row.amount)}</Table.Td>
-                <Table.Td ta="right">{formatMoney(row.principal)}</Table.Td>
-                <Table.Td ta="right">{formatMoney(row.interest)}</Table.Td>
+                {showBreakdown && <Table.Td ta="right">{formatMoney(row.principal)}</Table.Td>}
+                {showBreakdown && <Table.Td ta="right">{formatMoney(row.interest)}</Table.Td>}
                 <Table.Td ta="right">{formatMoney(row.remainingBalance)}</Table.Td>
               </Table.Tr>
             ))}

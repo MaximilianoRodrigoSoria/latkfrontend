@@ -1,38 +1,26 @@
-import { Badge, Card, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
-import {
-  IconCalculator,
-  IconCash,
-  IconChartLine,
-  IconCoin,
-  IconId,
-  IconUserDollar,
-  IconPackage,
-  IconReceipt2,
-  IconUsers,
-  type Icon,
-} from '@tabler/icons-react';
+import { Alert, Anchor, Badge, Stack, Text, Title } from '@mantine/core';
+import { IconClipboardCheck } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission, roleLabel } from '../../auth/permissions';
 import { QuotaCard } from '../quota/QuotaCard';
+import { PortfolioStatsPanel } from '../stats/StatsPage';
 
-interface Tile {
-  title: string;
-  description: string;
-  icon: Icon;
-  to?: string;
-  soon?: boolean;
-}
-
+/**
+ * Inicio: lo importante de un vistazo. El vendedor ve su objetivo del mes; el admin, lo que espera
+ * su aprobacion; todos, las estadisticas de su cartera. El resto se navega desde la barra
+ * (Clientes, Prestamos con su simulador y productos, Ganancias o Vendedores).
+ */
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const canReadProducts = hasPermission(user, Permission.PRODUCT_READ);
-  const products = useQuery({
-    queryKey: queryKeys.products(true),
-    queryFn: () => api.products(true),
-    enabled: canReadProducts,
+  const seller = isSeller(user);
+
+  const quota = useQuery({
+    queryKey: queryKeys.myQuota,
+    queryFn: api.myQuota,
+    enabled: seller,
   });
 
   const canApprove = hasPermission(user, Permission.LOAN_APPROVE);
@@ -42,80 +30,7 @@ export function DashboardPage() {
     enabled: canApprove,
   });
   const pending = loans.data?.filter((l) => l.status === 'REQUESTED').length ?? 0;
-
-  // Objetivo del mes: solo el vendedor (y solo si el admin le asigno cupo).
-  const quota = useQuery({
-    queryKey: queryKeys.myQuota,
-    queryFn: api.myQuota,
-    enabled: isSeller(user),
-  });
-
-  const tiles: Tile[] = [
-    {
-      title: 'Simular prestamo',
-      description: 'Calcula cuotas sobre un producto',
-      icon: IconCalculator,
-      to: '/simulator',
-    },
-    {
-      title: 'Productos',
-      description: `${products.data?.length ?? 0} disponibles hoy`,
-      icon: IconPackage,
-      to: '/products',
-    },
-    { title: 'Clientes', description: 'Alta y cartera propia', icon: IconUsers, to: '/customers' },
-    {
-      title: 'Préstamos',
-      description:
-        canApprove && pending > 0
-          ? `${pending} pendiente${pending === 1 ? '' : 's'} de aprobación`
-          : 'Solicitudes y estado',
-      icon: IconReceipt2,
-      to: '/loans',
-    },
-    {
-      title: 'Cobranzas',
-      description: 'Préstamos en curso y cuotas a cobrar',
-      icon: IconCash,
-      to: '/loans?status=DISBURSED',
-    },
-    ...(hasPermission(user, Permission.SELLER_MANAGE)
-      ? [
-          {
-            title: 'Vendedores',
-            description: 'Alta, datos, CBU y comisión',
-            icon: IconUserDollar,
-            to: '/sellers',
-          },
-        ]
-      : []),
-    ...(hasPermission(user, Permission.PROFILE_MANAGE_OWN)
-      ? [
-          {
-            title: 'Mis datos',
-            description: 'Tu CBU y dónde transferir lo cobrado',
-            icon: IconId,
-            to: '/profile',
-          },
-        ]
-      : []),
-    ...(isSeller(user)
-      ? [
-          {
-            title: 'Mis ganancias',
-            description: 'Lo que ganaste este mes y lo que te falta cobrar',
-            icon: IconCoin,
-            to: '/earnings',
-          },
-        ]
-      : []),
-    {
-      title: 'Estadísticas',
-      description: 'Cobrado, por cobrar, mora y flujo por mes',
-      icon: IconChartLine,
-      to: '/stats',
-    },
-  ];
+  const toTransfer = loans.data?.filter((l) => l.status === 'APPROVED').length ?? 0;
 
   return (
     <Stack>
@@ -127,43 +42,31 @@ export function DashboardPage() {
           {roleLabel(user)}
         </Badge>
       </Stack>
-      {quota.data && <QuotaCard quota={quota.data} />}
-      <SimpleGrid cols={{ base: 1, xs: 2, lg: 3 }}>
-        {tiles.map((tile) =>
-          tile.to && !tile.soon ? (
-            <Card key={tile.title} withBorder padding="lg" component={Link} to={tile.to}>
-              <TileContent tile={tile} />
-            </Card>
-          ) : (
-            <Card key={tile.title} withBorder padding="lg" style={{ opacity: 0.6 }}>
-              <TileContent tile={tile} />
-            </Card>
-          ),
-        )}
-      </SimpleGrid>
-    </Stack>
-  );
-}
 
-function TileContent({ tile }: { tile: Tile }) {
-  return (
-    <Group wrap="nowrap" align="center" gap="lg">
-      <ThemeIcon size={48} variant="light" radius="md">
-        <tile.icon size={24} />
-      </ThemeIcon>
-      <Stack gap={2}>
-        <Group gap="xs">
-          <Text fw={700}>{tile.title}</Text>
-          {tile.soon && (
-            <Badge size="xs" variant="outline">
-              Proximamente
-            </Badge>
-          )}
-        </Group>
-        <Text size="sm" c="dimmed">
-          {tile.description}
-        </Text>
-      </Stack>
-    </Group>
+      {quota.data && <QuotaCard quota={quota.data} />}
+
+      {canApprove && (pending > 0 || toTransfer > 0) && (
+        <Alert icon={<IconClipboardCheck />} color="orange" title="Para resolver">
+          <Stack gap={2}>
+            {pending > 0 && (
+              <Anchor component={Link} to="/loans?status=REQUESTED" size="sm">
+                {pending} solicitud{pending === 1 ? '' : 'es'} para aprobar
+              </Anchor>
+            )}
+            {toTransfer > 0 && (
+              <Anchor component={Link} to="/loans?status=APPROVED" size="sm">
+                {toTransfer} préstamo{toTransfer === 1 ? '' : 's'} para transferir
+              </Anchor>
+            )}
+          </Stack>
+        </Alert>
+      )}
+
+      {hasPermission(user, Permission.DASHBOARD_READ) ? (
+        <PortfolioStatsPanel />
+      ) : (
+        <Text c="dimmed">Usá la barra para moverte por la app.</Text>
+      )}
+    </Stack>
   );
 }
