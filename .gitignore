@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+*.local
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
+
+# Capacitor / Android: artefactos generados
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/

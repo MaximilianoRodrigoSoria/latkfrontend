@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">L.A TK</string>
+    <string name="title_activity_main">L.A TK</string>
+    <string name="package_name">ar.com.latk.app</string>
+    <string name="custom_url_scheme">ar.com.latk.app</string>
+</resources>

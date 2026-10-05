@@ -1,0 +1,40 @@
+/* Ajustes globales mobile-first. */
+html,
+body {
+  overscroll-behavior-y: none; /* evita el "rebote" de toda la pagina en iOS/Android */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.latk-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.latk-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Proteccion de capturas (roles distintos de ADMIN). */
+body.latk-protected {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* sin menu de "copiar/guardar" al mantener presionado en iOS */
+}
+
+body.latk-protected input,
+body.latk-protected textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@media print {
+  body.latk-protected * {
+    display: none !important;
+  }
+
+  body.latk-protected::after {
+    content: 'Contenido protegido: impresion deshabilitada.';
+    display: block;
+    padding: 2rem;
+    font: 16px sans-serif;
+  }
+}
