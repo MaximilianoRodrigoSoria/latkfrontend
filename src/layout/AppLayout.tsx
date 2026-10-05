@@ -23,7 +23,7 @@ import { BrandMark } from '../shared/components/BrandMark';
 import { NAV_ITEMS } from './navigation';
 
 const HEADER_HEIGHT = 56;
-const BOTTOM_NAV_HEIGHT = 64;
+const BOTTOM_NAV_HEIGHT = 72;
 
 /**
  * Mobile-first: en celular, barra inferior con las secciones (al alcance del pulgar); desde 48em
@@ -58,7 +58,7 @@ export function AppLayout() {
       <AppShell.Header className="latk-safe-top">
         <Group h={HEADER_HEIGHT} px="md" justify="space-between" wrap="nowrap">
           <BrandMark size={28} />
-          <Group gap="xs" wrap="nowrap">
+          <Group gap="md" wrap="nowrap">
             <ActionIcon
               variant="subtle"
               size="lg"
@@ -120,7 +120,7 @@ export function AppLayout() {
       </AppShell.Main>
 
       <AppShell.Footer hiddenFrom="sm" className="latk-bottom-nav">
-        <Group h={BOTTOM_NAV_HEIGHT} grow gap={0} wrap="nowrap">
+        <Group h={BOTTOM_NAV_HEIGHT} grow gap="xs" px="xs" wrap="nowrap">
           {items.map((item) => {
             const active = isActive(item.to);
             return (
@@ -131,7 +131,7 @@ export function AppLayout() {
                 aria-current={active ? 'page' : undefined}
                 h="100%"
               >
-                <Stack gap={2} align="center" c={active ? 'brand' : 'dimmed'}>
+                <Stack gap={6} align="center" py={6} c={active ? 'brand' : 'dimmed'}>
                   <item.icon size={24} stroke={active ? 2.2 : 1.6} />
                   <Text size="xs" fw={active ? 700 : 500}>
                     {item.label}

@@ -63,6 +63,25 @@ export interface SimulationResponse {
   schedule: InstallmentView[];
 }
 
+export interface OfferOption {
+  amount: number;
+  installments: number;
+  installmentAmount: number;
+  totalToRepay: number;
+  /** Solo presente si el vendedor confirmo su contrasena. */
+  commissionPerInstallment?: number;
+  /** Ganancia en todo el prestamo: comision por cuota x cantidad de cuotas. */
+  totalCommission?: number;
+}
+
+export interface ProductOffer {
+  productId: string;
+  productName: string;
+  frequency: PaymentFrequency;
+  ratePerPeriod: number;
+  options: OfferOption[];
+}
+
 export interface ThemeTokens {
   primaryColor: string;
   accentColor: string;

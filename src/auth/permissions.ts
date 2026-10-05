@@ -13,6 +13,7 @@ export const Permission = {
   PARAMETER_MANAGE: 'parameter.manage',
   LOAN_SIMULATE: 'loan.simulate',
   DASHBOARD_READ: 'dashboard.read',
+  COMMISSION_READ_OWN: 'commission.read.own',
 } as const;
 
 export function hasPermission(user: SessionUser | null, permission: string): boolean {
@@ -21,6 +22,11 @@ export function hasPermission(user: SessionUser | null, permission: string): boo
 
 export function isAdmin(user: SessionUser | null): boolean {
   return !!user && user.roles.includes(Role.ADMIN);
+}
+
+/** Solo un vendedor tiene porcentaje de comision propio para revelar. */
+export function isSeller(user: SessionUser | null): boolean {
+  return !!user && user.roles.includes(Role.SELLER);
 }
 
 /**

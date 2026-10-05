@@ -77,8 +77,8 @@ export function DashboardPage() {
 
 function TileContent({ tile }: { tile: Tile }) {
   return (
-    <Group wrap="nowrap" align="flex-start">
-      <ThemeIcon size={44} variant="light">
+    <Group wrap="nowrap" align="center" gap="lg">
+      <ThemeIcon size={48} variant="light" radius="md">
         <tile.icon size={24} />
       </ThemeIcon>
       <Stack gap={2}>
