@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../../api/endpoints';
+import { ApiError } from '../../api/http';
 import type { LoanResponse } from '../../api/types';
 import { NewLoanPage } from './NewLoanPage';
 
@@ -81,7 +82,48 @@ describe('NewLoanPage', () => {
 
     await waitFor(() =>
       expect(create).toHaveBeenCalledWith(
-        { customerId: 'c1', productId: 'p1', amount: 100000, installments: 6, notes: null },
+        {
+          customerId: 'c1',
+          productId: 'p1',
+          amount: 100000,
+          installments: 6,
+          notes: null,
+          useExtraQuota: false,
+        },
+        expect.anything(),
+      ),
+    );
+    expect(await screen.findByText('detalle')).toBeTruthy();
+  });
+
+  it('si supera el cupo ofrece pedirlo con el margen extra', async () => {
+    const create = vi
+      .spyOn(api, 'createLoan')
+      .mockRejectedValueOnce(
+        new ApiError({
+          status: 409,
+          title: 'Conflicto',
+          detail: 'Supera tu cupo',
+          code: 'QUOTA_EXCEEDED',
+          remaining: 50000,
+          extraRemaining: 100000,
+        }),
+      )
+      .mockResolvedValueOnce({ ...loan('c1', 'REQUESTED'), id: 'nuevo', customerName: 'Juan' });
+    renderPage();
+
+    fireEvent.click(await screen.findByText(/Semanal · Semanal/));
+    fireEvent.click(await screen.findByText('$ 100.000'));
+    fireEvent.click(await screen.findByText('6 cuotas de $ 18.460'));
+    fireEvent.click(screen.getByRole('button', { name: /Solicitar préstamo/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByText('Superás tu cupo del mes')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Pedir con margen extra' }));
+
+    await waitFor(() =>
+      expect(create).toHaveBeenLastCalledWith(
+        expect.objectContaining({ useExtraQuota: true }),
         expect.anything(),
       ),
     );

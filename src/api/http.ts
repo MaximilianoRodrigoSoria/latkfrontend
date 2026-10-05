@@ -8,6 +8,10 @@ export class ApiError extends Error {
   readonly status: number;
   readonly title: string;
   readonly validationErrors: ProblemDetail['validationErrors'];
+  /** Codigo estable (por ejemplo QUOTA_EXCEEDED) para reaccionar sin leer el texto. */
+  readonly code?: string;
+  /** El cuerpo completo: trae los datos extra del error. */
+  readonly problem: ProblemDetail;
 
   constructor(problem: ProblemDetail) {
     super(problem.detail ?? problem.title ?? `Error ${problem.status}`);
@@ -15,6 +19,8 @@ export class ApiError extends Error {
     this.status = problem.status;
     this.title = problem.title ?? 'Error';
     this.validationErrors = problem.validationErrors;
+    this.code = problem.code;
+    this.problem = problem;
   }
 }
 

@@ -106,6 +106,9 @@ export interface ProblemDetail {
   title?: string;
   detail?: string;
   validationErrors?: { field: string; message: string }[];
+  /** Codigo estable de algunos 409 (por ejemplo QUOTA_EXCEEDED) y sus datos. */
+  code?: string;
+  [extra: string]: unknown;
 }
 
 export interface AddressDto {
@@ -191,6 +194,8 @@ export interface LoanRequestBody {
   amount: number;
   installments: number;
   notes?: string | null;
+  /** Confirma usar el margen extra cuando el prestamo supera el cupo del mes. */
+  useExtraQuota?: boolean;
 }
 
 /** El backend nunca envia el % de comision del vendedor. */
@@ -425,4 +430,29 @@ export interface CustomerActivity {
   /** Motivo, referencia, notas o, en modificaciones, una linea por campo cambiado. */
   detail?: string | null;
   advance: boolean;
+}
+
+/** Cupo mensual de prestamos de un vendedor (su objetivo del mes). */
+export interface Quota {
+  sellerId: string;
+  /** "2026-10" */
+  month: string;
+  assigned: number;
+  extraAllowance: number;
+  lent: number;
+  remaining: number;
+  extraRemaining: number;
+  lentPercent: number;
+  loans: number;
+  toRepay: number;
+  repaid: number;
+  full: boolean;
+  usingExtra: boolean;
+  fullyRepaid: boolean;
+}
+
+export interface QuotaRequest {
+  monthlyAmount: number;
+  /** Vacio = margen por defecto del sistema. */
+  extraAllowance?: number | null;
 }

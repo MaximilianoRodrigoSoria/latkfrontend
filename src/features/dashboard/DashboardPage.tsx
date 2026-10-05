@@ -16,6 +16,7 @@ import { Link } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission, roleLabel } from '../../auth/permissions';
+import { QuotaCard } from '../quota/QuotaCard';
 
 interface Tile {
   title: string;
@@ -41,6 +42,13 @@ export function DashboardPage() {
     enabled: canApprove,
   });
   const pending = loans.data?.filter((l) => l.status === 'REQUESTED').length ?? 0;
+
+  // Objetivo del mes: solo el vendedor (y solo si el admin le asigno cupo).
+  const quota = useQuery({
+    queryKey: queryKeys.myQuota,
+    queryFn: api.myQuota,
+    enabled: isSeller(user),
+  });
 
   const tiles: Tile[] = [
     {
@@ -119,6 +127,7 @@ export function DashboardPage() {
           {roleLabel(user)}
         </Badge>
       </Stack>
+      {quota.data && <QuotaCard quota={quota.data} />}
       <SimpleGrid cols={{ base: 1, xs: 2, lg: 3 }}>
         {tiles.map((tile) =>
           tile.to && !tile.soon ? (

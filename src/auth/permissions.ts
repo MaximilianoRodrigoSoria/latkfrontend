@@ -23,6 +23,7 @@ export const Permission = {
   COLLECTION_REGISTER: 'collection.register',
   COLLECTION_REVERT: 'collection.revert',
   SELLER_MANAGE: 'seller.manage',
+  QUOTA_MANAGE: 'quota.manage',
   PROFILE_MANAGE_OWN: 'profile.manage.own',
   LOAN_READ_OWN: 'loan.read.own',
   LOAN_READ_ALL: 'loan.read.all',

@@ -14,6 +14,8 @@ import type {
   NewSellerRequest,
   NotificationInbox,
   PortfolioStats,
+  Quota,
+  QuotaRequest,
   ProductOffer,
   ProductRequest,
   ProductResponse,
@@ -121,6 +123,14 @@ export const api = {
 
   portfolioStats: () => request<PortfolioStats>('/api/v1/stats/portfolio'),
 
+  /** undefined si el vendedor no tiene cupo asignado (204). */
+  myQuota: () => request<Quota | undefined>('/api/v1/quotas/me'),
+  quotas: () => request<Quota[]>('/api/v1/quotas'),
+  assignQuota: (sellerId: string, body: QuotaRequest) =>
+    request<Quota>(`/api/v1/sellers/${sellerId}/quota`, { method: 'PUT', body }),
+  removeQuota: (sellerId: string) =>
+    request<void>(`/api/v1/sellers/${sellerId}/quota`, { method: 'DELETE' }),
+
   theme: () => request<ThemeResponse>('/api/v1/settings/theme'),
   updateTheme: (body: ThemeTokens) =>
     request<ThemeResponse>('/api/v1/settings/theme', { method: 'PUT', body }),
@@ -141,5 +151,7 @@ export const queryKeys = {
   collectionAccount: ['collectionAccount'] as const,
   notifications: ['notifications'] as const,
   portfolioStats: ['portfolioStats'] as const,
+  myQuota: ['quota', 'me'] as const,
+  quotas: ['quota', 'all'] as const,
   loan: (id: string) => ['loan', id] as const,
 };

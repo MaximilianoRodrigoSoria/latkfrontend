@@ -15,11 +15,15 @@ import {
   Textarea,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowLeft, IconInfoCircle, IconSend } from '@tabler/icons-react';
+import { IconArrowLeft, IconInfoCircle, IconSend, IconTargetArrow } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
+import { ApiError } from '../../api/http';
+import { useAuthStore } from '../../auth/authStore';
+import { isSeller } from '../../auth/permissions';
+import { monthName } from '../quota/QuotaCard';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { FREQUENCY_LABEL, formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
@@ -48,6 +52,16 @@ export function NewLoanPage() {
   });
   const [notes, setNotes] = useState('');
   const [confirming, { open: confirm, close: cancel }] = useDisclosure(false);
+  const user = useAuthStore((s) => s.user);
+  // Respuesta 409 QUOTA_EXCEEDED: supera el cupo pero entra en el margen extra.
+  const [overQuota, setOverQuota] = useState<{ remaining: number; extraRemaining: number } | null>(
+    null,
+  );
+  const quota = useQuery({
+    queryKey: queryKeys.myQuota,
+    queryFn: api.myQuota,
+    enabled: isSeller(user),
+  });
 
   const customers = useQuery({
     queryKey: queryKeys.customers(''),
@@ -82,15 +96,25 @@ export function NewLoanPage() {
           : `Solicitud enviada para ${loan.customerName}. Queda pendiente de aprobación.`,
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.loans });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myQuota });
+      setOverQuota(null);
       navigate(`/loans/${loan.id}`, { replace: true });
     },
     onError: (error) => {
       cancel();
+      if (error instanceof ApiError && error.code === 'QUOTA_EXCEEDED') {
+        setOverQuota({
+          remaining: Number(error.problem.remaining ?? 0),
+          extraRemaining: Number(error.problem.extraRemaining ?? 0),
+        });
+        return;
+      }
+      setOverQuota(null);
       notifyError(error);
     },
   });
 
-  const submit = () => {
+  const submit = (useExtraQuota = false) => {
     if (!isComplete(draft)) return;
     create.mutate({
       customerId: draft.customerId!,
@@ -98,6 +122,7 @@ export function NewLoanPage() {
       amount: draft.amount!,
       installments: draft.installments!,
       notes: notes.trim() || null,
+      useExtraQuota,
     });
   };
 
@@ -114,6 +139,18 @@ export function NewLoanPage() {
         title="Nuevo préstamo"
         description="Los montos chicos se aprueban solos; los grandes los aprueba el administrador"
       />
+
+      {quota.data && (
+        <Alert
+          icon={<IconTargetArrow />}
+          color={quota.data.full ? 'orange' : 'blue'}
+          title={`Cupo de ${monthName(quota.data.month)}`}
+        >
+          {quota.data.full
+            ? `Ya prestaste todo tu cupo. Margen extra disponible: ${formatMoneyShort(quota.data.extraRemaining)}.`
+            : `Te quedan ${formatMoneyShort(quota.data.remaining)} de ${formatMoneyShort(quota.data.assigned)}.`}
+        </Alert>
+      )}
 
       {loading && <Skeleton h={320} />}
       {customers.data?.length === 0 && (
@@ -259,8 +296,40 @@ export function NewLoanPage() {
               <Button variant="default" onClick={cancel} disabled={create.isPending}>
                 Volver
               </Button>
-              <Button onClick={submit} loading={create.isPending}>
+              <Button onClick={() => submit()} loading={create.isPending}>
                 Confirmar
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      <Modal
+        opened={overQuota !== null}
+        onClose={() => setOverQuota(null)}
+        title="Superás tu cupo del mes"
+        centered
+      >
+        {overQuota && chosen && (
+          <Stack>
+            <Text size="sm">
+              Este préstamo de <b>{formatMoneyShort(chosen.amount)}</b> supera lo que te queda del
+              cupo ({formatMoneyShort(overQuota.remaining)}).
+            </Text>
+            <Text size="sm">
+              Podés pedirlo igual usando el <b>margen extra</b>: te quedan{' '}
+              <b>{formatMoneyShort(overQuota.extraRemaining)}</b>. El administrador lo ve en tu
+              cupo.
+            </Text>
+            <Group grow>
+              <Button
+                variant="default"
+                onClick={() => setOverQuota(null)}
+                disabled={create.isPending}
+              >
+                No, volver
+              </Button>
+              <Button color="orange" onClick={() => submit(true)} loading={create.isPending}>
+                Pedir con margen extra
               </Button>
             </Group>
           </Stack>

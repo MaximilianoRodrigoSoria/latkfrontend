@@ -18,12 +18,15 @@ import { Link, useNavigate } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { notifyError, notifySuccess } from '../../shared/notify';
+import { QuotaBar, useAllQuotas } from '../quota/QuotaAdminCard';
 import { Completeness } from './Completeness';
 import { SellerForm } from './SellerForm';
 import { toNewSellerRequest } from './sellerFormModel';
 
 /** Administracion de vendedores (permiso seller.manage). */
 export function SellersPage() {
+  const quotas = useAllQuotas();
+  const quotaOf = (id: string) => quotas.data?.find((q) => q.sellerId === id);
   const [search, setSearch] = useState('');
   const [opened, { open, close }] = useDisclosure(false);
   const mobile = useMediaQuery('(max-width: 48em)');
@@ -99,6 +102,7 @@ export function SellersPage() {
                   </Group>
                 )}
                 <Completeness value={s.completeness} missing={s.missingFields} compact />
+                {quotaOf(s.userId) && <QuotaBar quota={quotaOf(s.userId)!} />}
               </Stack>
               <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
             </Group>
