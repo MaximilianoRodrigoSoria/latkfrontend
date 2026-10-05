@@ -20,7 +20,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { Completeness } from './Completeness';
 import { SellerForm } from './SellerForm';
-import { toNewSellerRequest } from './sellerForm';
+import { toNewSellerRequest } from './sellerFormModel';
 
 /** Administracion de vendedores (permiso seller.manage). */
 export function SellersPage() {

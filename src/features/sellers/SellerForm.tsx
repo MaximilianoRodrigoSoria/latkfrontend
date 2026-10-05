@@ -24,7 +24,7 @@ import {
   sellerValidation,
   type SellerFormMode,
   type SellerFormValues,
-} from './sellerForm';
+} from './sellerFormModel';
 
 interface SellerFormProps {
   mode: SellerFormMode;

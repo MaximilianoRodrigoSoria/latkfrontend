@@ -19,7 +19,7 @@ import { formatDate } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { Completeness } from './Completeness';
 import { SellerForm } from './SellerForm';
-import { toDataRequest, valuesFrom } from './sellerForm';
+import { toDataRequest, valuesFrom } from './sellerFormModel';
 
 /** El administrador ve y corrige todos los datos del vendedor y su %. */
 export function SellerDetailPage() {

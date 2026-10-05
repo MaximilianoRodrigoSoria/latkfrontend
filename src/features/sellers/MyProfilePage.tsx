@@ -9,7 +9,7 @@ import { formatCuil } from '../customers/validators';
 import { CollectionAccountCard } from '../settings/CollectionAccountCard';
 import { Completeness } from './Completeness';
 import { SellerForm } from './SellerForm';
-import { toContactRequest, valuesFrom } from './sellerForm';
+import { toContactRequest, valuesFrom } from './sellerFormModel';
 
 /**
  * Mis datos (vendedor): ve todo lo suyo menos su %, edita lo que cambia (telefono, email,

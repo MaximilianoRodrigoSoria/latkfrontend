@@ -6,7 +6,7 @@ import {
   toContactRequest,
   toNewSellerRequest,
   valuesFrom,
-} from './sellerForm';
+} from './sellerFormModel';
 
 // Valor de prueba armado en tiempo de ejecucion (no es una credencial real).
 const TEST_PASS = 'x'.repeat(10);
