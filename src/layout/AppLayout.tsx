@@ -14,13 +14,14 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
-import { IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
+import { IconDeviceMobileDown, IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
 import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../auth/authStore';
 import { hasAnyPermission, isSeller, roleLabel } from '../auth/permissions';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { BrandMark } from '../shared/components/BrandMark';
+import { useInstallApp } from '../shared/install/InstallApp';
 import { setNotifyNavigator } from '../shared/notify';
 import { NAV_ITEMS } from './navigation';
 
@@ -50,6 +51,7 @@ export function AppLayout() {
     return () => setNotifyNavigator(null);
   }, [navigate]);
 
+  const installApp = useInstallApp();
   const barItems = items.filter((item) => !item.menuOnly);
   const menuItems = items.filter((item) => item.menuOnly);
   const isActive = (to: string) => {
@@ -70,6 +72,7 @@ export function AppLayout() {
       footer={{ height: { base: BOTTOM_NAV_HEIGHT, sm: 0 } }}
       padding="md"
     >
+      {installApp.helpModal}
       <AppShell.Header className="latk-safe-top">
         <Group h={HEADER_HEIGHT} px="md" justify="space-between" wrap="nowrap">
           <BrandMark size={28} />
@@ -110,7 +113,15 @@ export function AppLayout() {
                     {item.label}
                   </Menu.Item>
                 ))}
-                {menuItems.length > 0 && <Menu.Divider />}
+                {installApp.available && (
+                  <Menu.Item
+                    leftSection={<IconDeviceMobileDown size={16} />}
+                    onClick={() => void installApp.install()}
+                  >
+                    Instalar app
+                  </Menu.Item>
+                )}
+                <Menu.Divider />
                 <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={logout}>
                   Cerrar sesion
                 </Menu.Item>

@@ -31,6 +31,8 @@ import type {
 export const api = {
   login: (body: LoginRequest) =>
     request<LoginResponse>('/api/v1/auth/login', { method: 'POST', body }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    request<void>('/api/v1/auth/password', { method: 'POST', body }),
 
   products: (onlyAvailable: boolean) =>
     request<ProductResponse[]>(`/api/v1/products?onlyAvailable=${onlyAvailable}`),

@@ -1,15 +1,5 @@
 import { BarChart } from '@mantine/charts';
-import {
-  Badge,
-  Card,
-  Group,
-  Progress,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  ThemeIcon,
-} from '@mantine/core';
+import { Badge, Card, Group, SimpleGrid, Skeleton, Stack, Text, ThemeIcon } from '@mantine/core';
 import { IconAlertTriangle, IconCircleCheck, IconCircleX, type Icon } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { api, queryKeys } from '../../api/endpoints';
@@ -38,16 +28,21 @@ export function shortMonth(yearMonth: string): string {
     .replace(' de ', ' ');
 }
 
-/** Indicadores: el admin ve toda la cartera y el detalle por vendedor; el vendedor, lo suyo. */
+/** Estadisticas de la cartera; Inicio y el panel comparten la misma consulta. */
+export function usePortfolioStats(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.portfolioStats,
+    queryFn: api.portfolioStats,
+    refetchInterval: 60_000,
+    enabled,
+  });
+}
+
 /** Indicadores de la cartera (sin titulo): el admin ve todo y el detalle por vendedor; el vendedor, lo suyo. */
 export function PortfolioStatsPanel() {
   const user = useAuthStore((s) => s.user);
   const seesAll = hasPermission(user, Permission.LOAN_READ_ALL);
-  const stats = useQuery({
-    queryKey: queryKeys.portfolioStats,
-    queryFn: api.portfolioStats,
-    refetchInterval: 60_000,
-  });
+  const stats = usePortfolioStats();
   const s = stats.data;
 
   return (
@@ -61,7 +56,6 @@ export function PortfolioStatsPanel() {
 
 function StatsView({ stats: s, seesAll }: { stats: PortfolioStats; seesAll: boolean }) {
   const level = LEVEL[s.overdue.level];
-  const monthTotal = s.collectedThisMonth.amount + s.dueThisMonth.amount;
   const chart = s.months.map((m) => ({
     mes: shortMonth(m.month),
     Cobrado: m.collected,
@@ -82,29 +76,7 @@ function StatsView({ stats: s, seesAll }: { stats: PortfolioStats; seesAll: bool
         />
       </SimpleGrid>
 
-      <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <Card withBorder padding="md">
-          <Text fw={700}>Este mes</Text>
-          <Group gap={6} align="baseline" mt={4}>
-            <Text fw={800} size="xl" c="teal">
-              {formatMoneyShort(s.collectedThisMonth.amount)}
-            </Text>
-            <Text size="sm" c="dimmed">
-              cobrado de {formatMoneyShort(monthTotal)}
-            </Text>
-          </Group>
-          <Progress
-            mt="xs"
-            value={monthTotal ? (s.collectedThisMonth.amount / monthTotal) * 100 : 0}
-            color="teal"
-            aria-label="Cobrado del mes"
-          />
-          <Text size="sm" mt="xs">
-            Vencen en los próximos 7 días: <b>{s.dueNext7Days.installments}</b> cuotas ·{' '}
-            <b>{formatMoneyShort(s.dueNext7Days.amount)}</b>
-          </Text>
-        </Card>
-
+      <SimpleGrid cols={1}>
         <Card withBorder padding="md">
           <Group justify="space-between">
             <Text fw={700}>Morosidad</Text>

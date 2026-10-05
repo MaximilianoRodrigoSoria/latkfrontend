@@ -5,8 +5,10 @@ import { Link } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission, roleLabel } from '../../auth/permissions';
+import { InstallBanner } from '../../shared/install/InstallApp';
 import { QuotaCard } from '../quota/QuotaCard';
-import { PortfolioStatsPanel } from '../stats/StatsPage';
+import { PortfolioStatsPanel, usePortfolioStats } from '../stats/StatsPage';
+import { ThisMonthCard } from './ThisMonthCard';
 
 /**
  * Inicio: lo importante de un vistazo. El vendedor ve su objetivo del mes; el admin, lo que espera
@@ -22,6 +24,9 @@ export function DashboardPage() {
     queryFn: api.myQuota,
     enabled: seller,
   });
+
+  const canSeeStats = hasPermission(user, Permission.DASHBOARD_READ);
+  const stats = usePortfolioStats(canSeeStats);
 
   const canApprove = hasPermission(user, Permission.LOAN_APPROVE);
   const loans = useQuery({
@@ -43,6 +48,10 @@ export function DashboardPage() {
         </Badge>
       </Stack>
 
+      <InstallBanner />
+
+      {/* Lo mas destacado: cuanto gana este mes y su objetivo. */}
+      {stats.data && <ThisMonthCard stats={stats.data} seller={seller} />}
       {quota.data && <QuotaCard quota={quota.data} />}
 
       {canApprove && (pending > 0 || toTransfer > 0) && (
@@ -62,7 +71,7 @@ export function DashboardPage() {
         </Alert>
       )}
 
-      {hasPermission(user, Permission.DASHBOARD_READ) ? (
+      {canSeeStats ? (
         <PortfolioStatsPanel />
       ) : (
         <Text c="dimmed">Usá la barra para moverte por la app.</Text>

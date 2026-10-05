@@ -45,6 +45,11 @@ const SellerDetailPage = lazy(() =>
 const MyProfilePage = lazy(() =>
   import('../features/sellers/MyProfilePage').then((m) => ({ default: m.MyProfilePage })),
 );
+const ChangePasswordPage = lazy(() =>
+  import('../features/account/ChangePasswordPage').then((m) => ({
+    default: m.ChangePasswordPage,
+  })),
+);
 const CollectionAccountPage = lazy(() =>
   import('../features/settings/CollectionAccountPage').then((m) => ({
     default: m.CollectionAccountPage,
@@ -153,6 +158,7 @@ export const router = createBrowserRouter([
           </RequirePermission>
         ),
       },
+      { path: 'account/password', element: <ChangePasswordPage /> },
       {
         path: 'settings/collection-account',
         element: (

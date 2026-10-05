@@ -2,6 +2,10 @@ node_modules/
 dist/
 dev-dist/
 coverage/
+# Playwright: resultados y reporte (las capturas de e2e/screenshots si se versionan)
+e2e/.results/
+e2e/.report/
+.env.e2e
 *.local
 .env
 .env.*

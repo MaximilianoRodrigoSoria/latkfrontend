@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Service worker tambien en `npm run dev`: asi el navegador del celular ofrece "Instalar"
+      // al probar por el tunel de Cloudflare (HTTPS).
+      devOptions: { enabled: true, navigateFallback: 'index.html' },
       includeAssets: ['favicon.png', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'L.A TK - Latin America Transaction Kernel',

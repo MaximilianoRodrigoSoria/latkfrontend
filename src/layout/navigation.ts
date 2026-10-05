@@ -1,6 +1,7 @@
 import {
   IconBuildingBank,
   IconId,
+  IconKey,
   IconUserDollar,
   IconCash,
   IconCoin,
@@ -60,6 +61,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Mis datos',
     icon: IconId,
     permissions: [Permission.PROFILE_MANAGE_OWN],
+    menuOnly: true,
+  },
+  {
+    to: '/account/password',
+    label: 'Cambiar contraseña',
+    icon: IconKey,
     menuOnly: true,
   },
   {
