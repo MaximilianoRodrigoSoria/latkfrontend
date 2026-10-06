@@ -20,6 +20,7 @@ import { notifyError, notifySuccess } from '../../shared/notify';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
 import { QuotaAdminCard } from '../quota/QuotaAdminCard';
+import { SellerCategoriesCard } from './SellerCategoriesCard';
 import { Completeness } from './Completeness';
 import { SellerForm } from './SellerForm';
 import { toDataRequest, valuesFrom } from './sellerFormModel';
@@ -29,10 +30,9 @@ export function SellerDetailPage() {
   const { id = '' } = useParams();
   const queryClient = useQueryClient();
   const seller = useQuery({ queryKey: queryKeys.seller(id), queryFn: () => api.seller(id) });
-  const canManageQuota = hasPermission(
-    useAuthStore((st) => st.user),
-    Permission.QUOTA_MANAGE,
-  );
+  const viewer = useAuthStore((st) => st.user);
+  const canManageQuota = hasPermission(viewer, Permission.QUOTA_MANAGE);
+  const canManageProducts = hasPermission(viewer, Permission.PRODUCT_MANAGE);
   const s = seller.data;
 
   const save = useMutation({
@@ -74,6 +74,8 @@ export function SellerDetailPage() {
           <CommissionCard seller={s} />
 
           {canManageQuota && <QuotaAdminCard sellerId={s.userId} />}
+
+          {canManageProducts && <SellerCategoriesCard sellerId={s.userId} />}
 
           <Card withBorder padding="md">
             {/* key: si cambian los datos en el servidor, el formulario arranca de nuevo. */}

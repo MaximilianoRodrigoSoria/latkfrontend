@@ -37,10 +37,14 @@ beforeEach(() => {
   vi.spyOn(api, 'offers').mockResolvedValue([
     {
       productId: 'p1',
-      productName: 'Semanal',
+      productName: 'Oro',
       frequency: 'WEEKLY',
-      ratePerPeriod: 0.03,
+      tier: 'GOLD',
+      tierLabel: 'Oro',
+      sellerVisible: true,
       options: [
+        { amount: 95000, installments: 4, installmentAmount: 25570, totalToRepay: 102280 },
+        { amount: 95000, installments: 6, installmentAmount: 17540, totalToRepay: 105240 },
         { amount: 100000, installments: 4, installmentAmount: 26910, totalToRepay: 107640 },
         { amount: 100000, installments: 6, installmentAmount: 18460, totalToRepay: 110760 },
       ],
@@ -62,6 +66,14 @@ const renderPage = () =>
     </QueryClientProvider>,
   );
 
+/** Elige la categoria (arranca en el monto maximo) y desliza las cuotas de 4 a 6. */
+async function chooseGold6() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Categoría Oro' }));
+  expect(screen.getByText(/máx\. \$\s100\.000/)).toBeTruthy();
+  const cuotas = screen.getByRole('slider', { name: 'Cuotas' });
+  fireEvent.keyDown(cuotas, { key: 'ArrowRight' });
+}
+
 describe('NewLoanPage', () => {
   it('arma la solicitud paso a paso y la envia confirmada', async () => {
     const create = vi
@@ -69,15 +81,13 @@ describe('NewLoanPage', () => {
       .mockResolvedValue({ ...loan('c1', 'REQUESTED'), id: 'nuevo', customerName: 'Juan Perez' });
     renderPage();
 
-    fireEvent.click(await screen.findByText(/Semanal · Semanal/));
-    fireEvent.click(await screen.findByText('$ 100.000'));
-    fireEvent.click(await screen.findByText('6 cuotas de $ 18.460'));
+    await chooseGold6();
 
     expect(screen.getByText('Total a devolver')).toBeTruthy();
     expect(screen.getByText('$ 110.760')).toBeTruthy();
-    expect(screen.getByText('Juan Perez')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Solicitar préstamo/ }));
+    expect(await screen.findByText('Juan Perez')).toBeTruthy();
     fireEvent.click(await screen.findByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() =>
@@ -112,9 +122,7 @@ describe('NewLoanPage', () => {
       .mockResolvedValueOnce({ ...loan('c1', 'REQUESTED'), id: 'nuevo', customerName: 'Juan' });
     renderPage();
 
-    fireEvent.click(await screen.findByText(/Semanal · Semanal/));
-    fireEvent.click(await screen.findByText('$ 100.000'));
-    fireEvent.click(await screen.findByText('6 cuotas de $ 18.460'));
+    await chooseGold6();
     fireEvent.click(screen.getByRole('button', { name: /Solicitar préstamo/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Confirmar' }));
 
@@ -130,9 +138,9 @@ describe('NewLoanPage', () => {
     expect(await screen.findByText('detalle')).toBeTruthy();
   });
 
-  it('no deja enviar sin elegir cuotas', async () => {
+  it('no deja enviar sin elegir la categoria', async () => {
     renderPage();
-    fireEvent.click(await screen.findByText(/Semanal · Semanal/));
+    await screen.findByRole('button', { name: 'Categoría Oro' });
     expect(
       (screen.getByRole('button', { name: /Solicitar préstamo/ }) as HTMLButtonElement).disabled,
     ).toBe(true);

@@ -16,6 +16,10 @@ export interface LoginResponse {
   expiresAt: string;
 }
 
+/** Categoria del producto, de menor a mayor monto (y riesgo). */
+export type ProductTier =
+  'IRON' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'EMERALD' | 'DIAMOND';
+
 export interface ProductRequest {
   name: string;
   frequency: PaymentFrequency;
@@ -27,15 +31,34 @@ export interface ProductRequest {
   installmentsToDefault: number;
   validFrom?: string | null;
   validTo?: string | null;
+  /** Con categoria, ratePerPeriod es el recargo que se suma a la tasa base por cuotas. */
+  tier?: ProductTier | null;
+  sellerVisible?: boolean;
 }
 
-export interface ProductResponse extends Omit<Required<ProductRequest>, 'ratePerPeriod'> {
-  /** Ausente para vendedores: no ven la tasa. */
+export interface ProductResponse extends Omit<
+  Required<ProductRequest>,
+  'ratePerPeriod' | 'tier' | 'sellerVisible'
+> {
+  /** Ausente para vendedores. Con categoria es el recargo de la categoria. */
   ratePerPeriod?: number;
+  tier?: ProductTier;
+  tierLabel?: string;
+  /** false: existe pero los vendedores no lo ven. */
+  sellerVisible: boolean;
+  /** Tasa efectiva por cantidad de cuotas ("8" -> 0.17). Ausente para vendedores. */
+  ratesByInstallments?: Record<string, number>;
   id: string;
   active: boolean;
   availableToday: boolean;
   createdAt: string;
+}
+
+/** Categorias que puede ofrecer un vendedor. restricted false: usa las de por defecto. */
+export interface SellerCategories {
+  sellerId: string;
+  restricted: boolean;
+  productIds: string[];
 }
 
 export interface SimulationRequest {
@@ -75,14 +98,21 @@ export interface OfferOption {
   commissionPerInstallment?: number;
   /** Ganancia en todo el prestamo: comision por cuota x cantidad de cuotas. */
   totalCommission?: number;
+  /** Tasa de esta combinacion. Ausente para vendedores. */
+  ratePerPeriod?: number;
 }
 
 export interface ProductOffer {
   productId: string;
   productName: string;
   frequency: PaymentFrequency;
-  /** Ausente para vendedores: no ven la tasa. */
+  /** Tasa unica de los productos sin categoria. Ausente para vendedores. */
   ratePerPeriod?: number;
+  tier?: ProductTier;
+  tierLabel?: string;
+  /** Recargo de la categoria. Ausente para vendedores. */
+  surcharge?: number;
+  sellerVisible: boolean;
   options: OfferOption[];
 }
 
@@ -210,6 +240,8 @@ export interface LoanResponse {
   customerName: string;
   customerDni: string | null;
   productName: string;
+  /** Categoria del producto al pedir el prestamo; ausente si no tenia. */
+  productTier?: ProductTier;
   frequency: PaymentFrequency;
   /** Ausente para vendedores: no ven la tasa. */
   ratePerPeriod?: number;

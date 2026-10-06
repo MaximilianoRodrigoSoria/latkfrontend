@@ -1,4 +1,4 @@
-import type { LoanStatus, OfferOption, ProductOffer } from '../../api/types';
+import type { LoanStatus } from '../../api/types';
 
 /** Seleccion del vendedor mientras arma la solicitud. */
 export interface LoanDraft {
@@ -14,51 +14,6 @@ export const EMPTY_DRAFT: LoanDraft = {
   amount: null,
   installments: null,
 };
-
-/** Montos habilitados del producto, de menor a mayor. */
-export function amountsOf(offer: ProductOffer | undefined): number[] {
-  if (!offer) return [];
-  return [...new Set(offer.options.map((o) => o.amount))].sort((a, b) => a - b);
-}
-
-/** Opciones de cuotas para un monto del producto, de menor a mayor. */
-export function installmentOptions(
-  offer: ProductOffer | undefined,
-  amount: number | null,
-): OfferOption[] {
-  if (!offer || amount === null) return [];
-  return offer.options
-    .filter((o) => o.amount === amount)
-    .sort((a, b) => a.installments - b.installments);
-}
-
-/** La opcion elegida (cuota y total), o null si la seleccion esta incompleta. */
-export function selectedOption(
-  offer: ProductOffer | undefined,
-  draft: LoanDraft,
-): OfferOption | null {
-  return (
-    installmentOptions(offer, draft.amount).find((o) => o.installments === draft.installments) ??
-    null
-  );
-}
-
-/**
- * Cambiar el producto o el monto invalida lo que depende de ellos: si el monto o las cuotas ya no
- * existen en la nueva seleccion, se limpian.
- */
-export function reconcile(offers: ProductOffer[], draft: LoanDraft): LoanDraft {
-  const offer = offers.find((o) => o.productId === draft.productId);
-  if (!offer) return { ...draft, productId: null, amount: null, installments: null };
-  const amount =
-    draft.amount !== null && amountsOf(offer).includes(draft.amount) ? draft.amount : null;
-  const installments =
-    amount !== null &&
-    installmentOptions(offer, amount).some((o) => o.installments === draft.installments)
-      ? draft.installments
-      : null;
-  return { ...draft, amount, installments };
-}
 
 export function isComplete(draft: LoanDraft): boolean {
   return (

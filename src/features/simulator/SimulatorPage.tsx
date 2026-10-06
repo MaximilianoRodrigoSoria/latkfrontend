@@ -1,7 +1,17 @@
-import { Button, Card, Group, Paper, Select, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import {
+  Button,
+  Card,
+  Group,
+  Paper,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Table,
+  Text,
+} from '@mantine/core';
 import { BarChart } from '@mantine/charts';
 import { DateInput } from '@mantine/dates';
-import { IconCalculator } from '@tabler/icons-react';
+import { IconListNumbers } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
@@ -9,111 +19,77 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { SimulationResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { isSeller } from '../../auth/permissions';
+import { EMPTY_CHOICE, LoanPicker, type LoanChoice } from '../loans/LoanPicker';
 import { LoansSectionTabs } from '../loans/LoansSectionTabs';
 import { PageHeader } from '../../shared/components/PageHeader';
-import {
-  formatDate,
-  formatMoney,
-  formatMoneyShort,
-  formatRate,
-  PERIOD_LABEL,
-} from '../../shared/format';
+import { formatDate, formatMoney, formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
 import { notifyError } from '../../shared/notify';
 import { ShareButton } from '../../shared/share/ShareButton';
 import { simulationMessage } from '../../shared/share/shareMessages';
 
+/**
+ * Simulador: la categoria, el monto y las cuotas se eligen con los mismos deslizadores que al pedir
+ * un prestamo (cuota y total al instante); el plan completo con fechas lo calcula el backend.
+ */
 export function SimulatorPage() {
-  const products = useQuery({
-    queryKey: queryKeys.products(true),
-    queryFn: () => api.products(true),
-  });
-  const [productId, setProductId] = useState<string | null>(null);
-  const [amount, setAmount] = useState<string | null>(null);
-  const [installments, setInstallments] = useState<string | null>(null);
+  const offers = useQuery({ queryKey: queryKeys.offers, queryFn: api.offers });
+  const [choice, setChoice] = useState<LoanChoice>(EMPTY_CHOICE);
   const [firstDueDate, setFirstDueDate] = useState<string | null>(null);
-
-  const product = products.data?.find((p) => p.id === productId);
 
   const simulate = useMutation({ mutationFn: api.simulate, onError: (e) => notifyError(e) });
 
-  const selectProduct = (id: string | null) => {
-    const selected = products.data?.find((p) => p.id === id);
-    setProductId(id);
-    setAmount(selected ? String(selected.allowedAmounts[0]) : null);
-    setInstallments(selected ? String(selected.allowedInstallments[0]) : null);
+  const change = (next: LoanChoice) => {
+    setChoice(next);
     simulate.reset();
   };
 
-  const canSimulate = !!productId && !!amount && !!installments;
+  const canSimulate =
+    choice.productId !== null && choice.amount !== null && choice.installments !== null;
 
   return (
     <Stack>
       <LoansSectionTabs />
-      <PageHeader title="Simulador" description="Plan de cuotas con sistema frances" />
-      <Paper withBorder p="md">
-        <Stack>
-          <Select
-            label="Producto"
-            placeholder={products.isLoading ? 'Cargando...' : 'Elegi un producto'}
-            data={(products.data ?? []).map((p) => ({ value: p.id, label: p.name }))}
-            value={productId}
-            onChange={selectProduct}
-            nothingFoundMessage="No hay productos disponibles"
-          />
-          {/* La tasa solo llega para el admin: el vendedor no la ve. */}
-          {product?.ratePerPeriod != null && (
-            <Text size="sm" c="dimmed">
-              Tasa {formatRate(product.ratePerPeriod)} {PERIOD_LABEL[product.frequency]}
-            </Text>
-          )}
-          <SimpleGrid cols={{ base: 2 }}>
-            <Select
-              label="Monto"
-              disabled={!product}
-              data={(product?.allowedAmounts ?? []).map((a) => ({
-                value: String(a),
-                label: formatMoneyShort(a),
-              }))}
-              value={amount}
-              onChange={setAmount}
+      <PageHeader title="Simulador" description="Elegí la categoría y deslizá monto y cuotas" />
+      {offers.isLoading && <Skeleton h={320} />}
+      {offers.data?.length === 0 && (
+        <Text c="dimmed" ta="center" py="xl">
+          No hay productos disponibles hoy.
+        </Text>
+      )}
+      {offers.data && offers.data.length > 0 && (
+        <Paper withBorder p="md">
+          <Stack>
+            <LoanPicker offers={offers.data} value={choice} onChange={change} />
+            <DateInput
+              label="Primer vencimiento (opcional)"
+              placeholder="Un periodo desde hoy"
+              valueFormat="DD/MM/YYYY"
+              minDate={dayjs().format('YYYY-MM-DD')}
+              clearable
+              value={firstDueDate}
+              onChange={(v) => {
+                setFirstDueDate(v);
+                simulate.reset();
+              }}
             />
-            <Select
-              label="Cuotas"
-              disabled={!product}
-              data={(product?.allowedInstallments ?? []).map((n) => ({
-                value: String(n),
-                label: `${n} cuotas`,
-              }))}
-              value={installments}
-              onChange={setInstallments}
-            />
-          </SimpleGrid>
-          <DateInput
-            label="Primer vencimiento (opcional)"
-            placeholder="Un periodo desde hoy"
-            valueFormat="DD/MM/YYYY"
-            minDate={dayjs().format('YYYY-MM-DD')}
-            clearable
-            value={firstDueDate}
-            onChange={setFirstDueDate}
-          />
-          <Button
-            leftSection={<IconCalculator size={18} />}
-            disabled={!canSimulate}
-            loading={simulate.isPending}
-            onClick={() =>
-              simulate.mutate({
-                productId: productId!,
-                amount: Number(amount),
-                installments: Number(installments),
-                firstDueDate: firstDueDate ? dayjs(firstDueDate).format('YYYY-MM-DD') : null,
-              })
-            }
-          >
-            Calcular
-          </Button>
-        </Stack>
-      </Paper>
+            <Button
+              leftSection={<IconListNumbers size={18} />}
+              disabled={!canSimulate}
+              loading={simulate.isPending}
+              onClick={() =>
+                simulate.mutate({
+                  productId: choice.productId!,
+                  amount: choice.amount!,
+                  installments: choice.installments!,
+                  firstDueDate: firstDueDate ? dayjs(firstDueDate).format('YYYY-MM-DD') : null,
+                })
+              }
+            >
+              Ver plan de cuotas
+            </Button>
+          </Stack>
+        </Paper>
+      )}
       {simulate.data && <SimulationResult result={simulate.data} />}
     </Stack>
   );

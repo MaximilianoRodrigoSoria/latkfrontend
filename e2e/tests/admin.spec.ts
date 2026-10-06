@@ -33,10 +33,18 @@ test.describe('administrador', () => {
     await capture(page, info, '04-admin-vendedor-detalle');
   });
 
-  test('productos con tasa', async ({ page }, info) => {
+  test('productos: todas las categorías con recargo y las ocultas marcadas', async ({
+    page,
+  }, info) => {
     await page.goto('/products');
-    await expect(page.getByText(/^Tasa /).first()).toBeVisible();
+    await expect(page.getByText(/^Recargo \+/).first()).toBeVisible();
+    await expect(page.getByText('Oculta por defecto').first()).toBeVisible();
+    await expect(page.getByText('Diamante', { exact: true })).toBeVisible();
     await capture(page, info, '05-admin-productos');
+
+    await page.getByText('Administrar', { exact: true }).click();
+    await expect(page.getByText('Habilitada por defecto para vendedores').first()).toBeVisible();
+    await capture(page, info, '05b-admin-productos-administrar');
   });
 
   test('cuenta para rendiciones', async ({ page }, info) => {

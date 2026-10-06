@@ -4,6 +4,10 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { AppNotification, NotificationInbox, NotificationTone } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { notify, type Tone } from '../../shared/notify';
+import { useNotificationPreferences } from './notificationPreferences';
+
+const popup: typeof notify = (options) =>
+  useNotificationPreferences.getState().popups ? notify(options) : '';
 
 /** Cada cuanto se consulta el servidor mientras la app esta abierta. */
 export const POLL_MS = 20_000;
@@ -69,7 +73,7 @@ export function useNotificationInbox() {
     if (seen.current === null) {
       seen.current = new Set(data.items.map((n) => n.id));
       if (data.unreadCount > 0) {
-        notify({
+        popup({
           tone: 'info',
           title: 'Notificaciones',
           message: `Tenés ${data.unreadCount} sin leer. Tocá la campana para verlas.`,
@@ -87,7 +91,7 @@ export function useNotificationInbox() {
       .slice(0, MAX_POPUPS)
       .reverse()
       .forEach((n) =>
-        notify({
+        popup({
           tone: toneOf(n),
           title: n.title,
           message: n.message,
@@ -96,7 +100,7 @@ export function useNotificationInbox() {
         }),
       );
     if (fresh.length > MAX_POPUPS) {
-      notify({
+      popup({
         tone: 'info',
         title: 'Notificaciones',
         message: `Y ${fresh.length - MAX_POPUPS} más en la campana.`,

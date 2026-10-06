@@ -2,12 +2,8 @@ import {
   Alert,
   Anchor,
   Button,
-  Card,
-  Chip,
-  Divider,
   Group,
   Modal,
-  ScrollArea,
   Select,
   Skeleton,
   Stack,
@@ -25,22 +21,16 @@ import { useAuthStore } from '../../auth/authStore';
 import { isSeller } from '../../auth/permissions';
 import { monthName } from '../quota/QuotaCard';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { FREQUENCY_LABEL, formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
+import { formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
-import {
-  amountsOf,
-  EMPTY_DRAFT,
-  installmentOptions,
-  isComplete,
-  isOpen,
-  reconcile,
-  selectedOption,
-  type LoanDraft,
-} from './loanDraft';
+import { findOption, offerLabel } from '../products/tiers';
+import { EMPTY_DRAFT, isComplete, isOpen, type LoanDraft } from './loanDraft';
+import { LoanPicker } from './LoanPicker';
 
 /**
- * Solicitud de prestamo del vendedor: cliente -> producto -> monto -> cuotas. Los valores salen de
- * las ofertas (mismo calculo y redondeo que el backend); el backend vuelve a validar todo.
+ * Solicitud de prestamo del vendedor: cliente -> categoria -> monto y cuotas con deslizadores. Los
+ * valores salen de las ofertas (mismo calculo y redondeo que el backend); el backend vuelve a
+ * validar todo.
  */
 export function NewLoanPage() {
   const [params] = useSearchParams();
@@ -81,11 +71,10 @@ export function NewLoanPage() {
   }));
 
   const offer = offers.data?.find((o) => o.productId === draft.productId);
-  const chosen = selectedOption(offer, draft);
+  const chosen = findOption(offer, draft.amount, draft.installments) ?? null;
   const customer = customers.data?.find((c) => c.id === draft.customerId);
 
-  const update = (patch: Partial<LoanDraft>) =>
-    setDraft((d) => reconcile(offers.data ?? [], { ...d, ...patch }));
+  const update = (patch: Partial<LoanDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const create = useMutation({
     mutationFn: api.createLoan,
@@ -129,7 +118,7 @@ export function NewLoanPage() {
   const loading = customers.isLoading || offers.isLoading;
 
   return (
-    <Stack pb="xl">
+    <Stack pb="xl" maw={760} w="100%" mx="auto">
       <Anchor component={Link} to="/loans" size="sm">
         <Group gap={4}>
           <IconArrowLeft size={16} /> Préstamos
@@ -176,86 +165,19 @@ export function NewLoanPage() {
             />
           </Step>
 
-          <Step n={2} title="Producto">
-            <ScrollArea type="never">
-              <Chip.Group
-                value={draft.productId ?? ''}
-                onChange={(value) => update({ productId: value as string })}
-              >
-                <Group gap="xs" wrap="nowrap">
-                  {offers.data?.map((o) => (
-                    <Chip key={o.productId} value={o.productId}>
-                      {o.productName} · {FREQUENCY_LABEL[o.frequency]}
-                    </Chip>
-                  ))}
-                </Group>
-              </Chip.Group>
-            </ScrollArea>
-            {offers.data?.length === 0 && (
+          <Step n={2} title="Categoría, monto y cuotas">
+            {offers.data?.length === 0 ? (
               <Text size="sm" c="dimmed">
                 No hay productos disponibles hoy.
               </Text>
+            ) : (
+              <LoanPicker
+                offers={offers.data ?? []}
+                value={draft}
+                onChange={(choice) => update(choice)}
+              />
             )}
           </Step>
-
-          {offer && (
-            <Step n={3} title="¿Cuánto prestás?">
-              <ScrollArea type="never">
-                <Chip.Group
-                  value={draft.amount === null ? '' : String(draft.amount)}
-                  onChange={(value) => update({ amount: Number(value) })}
-                >
-                  <Group gap="xs" wrap="nowrap">
-                    {amountsOf(offer).map((amount) => (
-                      <Chip key={amount} value={String(amount)} size="md">
-                        {formatMoneyShort(amount)}
-                      </Chip>
-                    ))}
-                  </Group>
-                </Chip.Group>
-              </ScrollArea>
-            </Step>
-          )}
-
-          {offer && draft.amount !== null && (
-            <Step n={4} title="Cuotas">
-              <Chip.Group
-                value={draft.installments === null ? '' : String(draft.installments)}
-                onChange={(value) => update({ installments: Number(value) })}
-              >
-                <Stack gap="xs">
-                  {installmentOptions(offer, draft.amount).map((o) => (
-                    <Chip key={o.installments} value={String(o.installments)} size="md">
-                      {o.installments} cuotas de {formatMoneyShort(o.installmentAmount)}
-                    </Chip>
-                  ))}
-                </Stack>
-              </Chip.Group>
-            </Step>
-          )}
-
-          {offer && chosen && (
-            <Card withBorder padding="md" bg="var(--mantine-color-default-hover)">
-              <Text fw={700} mb="xs">
-                Resumen
-              </Text>
-              <Summary
-                label="Cliente"
-                value={customer?.fullName ?? <Text c="red">Elegí un cliente</Text>}
-              />
-              <Summary label="Prestás" value={formatMoneyShort(chosen.amount)} />
-              <Summary
-                label="Cuotas"
-                value={`${chosen.installments} ${PERIOD_LABEL[offer.frequency]}es de ${formatMoneyShort(chosen.installmentAmount)}`}
-              />
-              <Divider my="xs" />
-              <Summary
-                label="Total a devolver"
-                value={formatMoneyShort(chosen.totalToRepay)}
-                strong
-              />
-            </Card>
-          )}
 
           <Textarea
             label="Notas para el administrador (opcional)"
@@ -267,15 +189,19 @@ export function NewLoanPage() {
             onChange={(e) => setNotes(e.currentTarget.value)}
           />
 
-          <Button
-            size="md"
-            fullWidth
-            leftSection={<IconSend size={18} />}
-            disabled={!isComplete(draft) || !chosen}
-            onClick={confirm}
-          >
-            Solicitar préstamo
-          </Button>
+          <Group justify="flex-end">
+            <Button component={Link} to="/loans" variant="default" size="md">
+              Cancelar
+            </Button>
+            <Button
+              size="md"
+              leftSection={<IconSend size={18} />}
+              disabled={!isComplete(draft) || !chosen}
+              onClick={confirm}
+            >
+              Solicitar préstamo
+            </Button>
+          </Group>
         </>
       )}
 
@@ -283,8 +209,8 @@ export function NewLoanPage() {
         {chosen && offer && (
           <Stack>
             <Text size="sm">
-              Vas a solicitar <b>{formatMoneyShort(chosen.amount)}</b> para{' '}
-              <b>{customer?.fullName}</b> en {chosen.installments} cuotas{' '}
+              Vas a solicitar <b>{formatMoneyShort(chosen.amount)}</b> ({offerLabel(offer)}) para{' '}
+              <b>{customer?.fullName ?? 'el cliente'}</b> en {chosen.installments} cuotas{' '}
               {PERIOD_LABEL[offer.frequency]}es de{' '}
               <b>{formatMoneyShort(chosen.installmentAmount)}</b>.
             </Text>
@@ -347,18 +273,5 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
       </Text>
       {children}
     </Stack>
-  );
-}
-
-function Summary({ label, value, strong }: { label: string; value: ReactNode; strong?: boolean }) {
-  return (
-    <Group justify="space-between" wrap="nowrap">
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Text size={strong ? 'lg' : 'sm'} fw={strong ? 800 : 500} ta="right" component="div">
-        {value}
-      </Text>
-    </Group>
   );
 }

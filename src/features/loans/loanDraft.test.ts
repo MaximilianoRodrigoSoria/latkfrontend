@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ProductOffer } from '../../api/types';
-import {
-  amountsOf,
-  EMPTY_DRAFT,
-  installmentOptions,
-  isComplete,
-  reconcile,
-  selectedOption,
-} from './loanDraft';
+import { findOption, offerAmounts, offerInstallments } from '../products/tiers';
+import { EMPTY_DRAFT, isComplete } from './loanDraft';
+import { chooseProduct, EMPTY_CHOICE, nearest } from './LoanPicker';
 
 const option = (amount: number, installments: number) => ({
   amount,
@@ -16,55 +11,68 @@ const option = (amount: number, installments: number) => ({
   totalToRepay: Math.ceil((amount * 1.2) / installments / 10) * 10 * installments,
 });
 
-const offers: ProductOffer[] = [
-  {
-    productId: 'sem',
-    productName: 'Semanal',
-    frequency: 'WEEKLY',
-    ratePerPeriod: 0.03,
-    options: [option(100000, 6), option(50000, 4), option(100000, 4), option(50000, 6)],
-  },
-  {
-    productId: 'men',
-    productName: 'Mensual',
-    frequency: 'MONTHLY',
-    ratePerPeriod: 0.1,
-    options: [option(200000, 4)],
-  },
-];
+const grid = (amounts: number[], installments: number[]) =>
+  amounts.flatMap((a) => installments.map((n) => option(a, n)));
 
-describe('loanDraft', () => {
+const bronce: ProductOffer = {
+  productId: 'bronce',
+  productName: 'Bronce',
+  frequency: 'WEEKLY',
+  tier: 'BRONZE',
+  tierLabel: 'Bronce',
+  sellerVisible: true,
+  options: grid([50000, 25000, 30000, 35000, 40000, 45000], [4, 5, 6, 7, 8]),
+};
+
+const oro: ProductOffer = {
+  productId: 'oro',
+  productName: 'Oro',
+  frequency: 'WEEKLY',
+  tier: 'GOLD',
+  tierLabel: 'Oro',
+  sellerVisible: true,
+  options: grid([75000, 80000, 85000, 90000, 95000, 100000], [4, 5, 6, 7, 8, 9, 10, 11, 12]),
+};
+
+describe('selector de categoria, monto y cuotas', () => {
   it('lista montos y cuotas ordenados', () => {
-    expect(amountsOf(offers[0])).toEqual([50000, 100000]);
-    expect(installmentOptions(offers[0], 100000).map((o) => o.installments)).toEqual([4, 6]);
-    expect(installmentOptions(offers[0], null)).toEqual([]);
+    expect(offerAmounts(bronce)).toEqual([25000, 30000, 35000, 40000, 45000, 50000]);
+    expect(offerInstallments(bronce, 30000)).toEqual([4, 5, 6, 7, 8]);
+    expect(offerAmounts(undefined)).toEqual([]);
   });
 
-  it('devuelve la opcion elegida solo con la seleccion completa', () => {
-    const draft = { ...EMPTY_DRAFT, productId: 'sem', amount: 100000, installments: 4 };
-    expect(selectedOption(offers[0], draft)?.installmentAmount).toBe(30000);
-    expect(selectedOption(offers[0], { ...draft, installments: null })).toBeNull();
-  });
-
-  it('al cambiar de producto limpia monto y cuotas que ya no existen', () => {
-    const draft = {
-      customerId: 'c1',
-      productId: 'men',
-      amount: 100000,
+  it('al elegir categoria arranca en el monto maximo y las cuotas del medio', () => {
+    expect(chooseProduct(bronce, EMPTY_CHOICE)).toEqual({
+      productId: 'bronce',
+      amount: 50000,
       installments: 6,
-    };
-    expect(reconcile(offers, draft)).toEqual({
-      customerId: 'c1',
-      productId: 'men',
-      amount: null,
-      installments: null,
     });
   });
 
-  it('conserva la seleccion valida', () => {
-    const draft = { customerId: 'c1', productId: 'sem', amount: 50000, installments: 6 };
-    expect(reconcile(offers, draft)).toEqual(draft);
+  it('al cambiar de categoria conserva lo que sigue valiendo', () => {
+    const fromBronce = { productId: 'bronce', amount: 50000, installments: 8 };
+    // 50.000 no existe en Oro (va al maximo); 8 cuotas si existen.
+    expect(chooseProduct(oro, fromBronce)).toEqual({
+      productId: 'oro',
+      amount: 100000,
+      installments: 8,
+    });
+  });
+
+  it('el deslizador se ajusta al valor permitido mas cercano', () => {
+    expect(nearest([4, 6, 8, 12, 16], 10)).toBe(8);
+    expect(nearest([25000, 30000, 35000], 33000)).toBe(35000);
+  });
+
+  it('encuentra la opcion elegida solo si existe', () => {
+    expect(findOption(oro, 100000, 12)?.installments).toBe(12);
+    expect(findOption(oro, 100000, 16)).toBeUndefined();
+  });
+
+  it('la solicitud esta completa con cliente, categoria, monto y cuotas', () => {
+    const draft = { customerId: 'c1', productId: 'oro', amount: 100000, installments: 8 };
     expect(isComplete(draft)).toBe(true);
     expect(isComplete({ ...draft, customerId: null })).toBe(false);
+    expect(isComplete(EMPTY_DRAFT)).toBe(false);
   });
 });

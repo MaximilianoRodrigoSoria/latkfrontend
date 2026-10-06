@@ -1,5 +1,4 @@
 import {
-  Affix,
   Button,
   Card,
   Drawer,
@@ -10,6 +9,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
+import { useOpenFromQuery } from '../../shared/useOpenFromQuery';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { IconChevronRight, IconPhone, IconSearch, IconUserPlus } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +29,8 @@ export function SellersPage() {
   const quotaOf = (id: string) => quotas.data?.find((q) => q.sellerId === id);
   const [search, setSearch] = useState('');
   const [opened, { open, close }] = useDisclosure(false);
+  // En el celular el alta se abre desde el "+" de la barra inferior.
+  useOpenFromQuery(open);
   const mobile = useMediaQuery('(max-width: 48em)');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -109,15 +111,6 @@ export function SellersPage() {
           </Card>
         ))}
       </SimpleGrid>
-
-      {mobile && !opened && (
-        <Affix position={{ bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20 }}>
-          <Button radius="xl" size="lg" leftSection={<IconUserPlus size={20} />} onClick={open}>
-            Nuevo
-          </Button>
-        </Affix>
-      )}
-
       <Drawer
         opened={opened}
         onClose={close}

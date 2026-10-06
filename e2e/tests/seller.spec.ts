@@ -58,30 +58,65 @@ test.describe('vendedor', () => {
     await capture(page, info, '07-prestamo-detalle');
   });
 
-  test('simulador sin tasa ni interés', async ({ page }, info) => {
+  test('simulador por categoría, sin tasa ni interés', async ({ page }, info) => {
     await page.goto('/simulator');
     await expect(page.getByRole('heading', { name: 'Simulador' })).toBeVisible();
-    await page.getByRole('combobox', { name: 'Producto' }).click();
-    await page.getByRole('option').first().click();
-    await page.getByRole('button', { name: 'Calcular' }).click();
+    await page.getByRole('button', { name: 'Categoría Oro' }).click();
     await expect(page.getByText('Total a devolver')).toBeVisible();
-    // El vendedor no ve la tasa ni el interes (regla de negocio).
-    await expect(page.getByText(/^Tasa /)).toHaveCount(0);
+    // El vendedor no ve la tasa, el recargo ni el interes (regla de negocio).
+    await expect(page.getByText(/Tasa \d/)).toHaveCount(0);
+    await expect(page.getByText(/Recargo/)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ver plan de cuotas' }).click();
+    await expect(page.getByText('Resultado')).toBeVisible();
     await expect(page.getByText('Interes total')).toHaveCount(0);
     await capture(page, info, '08-simulador');
   });
 
-  test('productos sin tasa', async ({ page }, info) => {
+  test('productos: solo las categorías habilitadas, sin tasa', async ({ page }, info) => {
     await page.goto('/products');
     await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible();
-    await expect(page.getByText(/^Tasa /)).toHaveCount(0);
+    for (const tier of ['Hierro', 'Bronce', 'Plata', 'Oro']) {
+      await expect(page.getByText(tier, { exact: true })).toBeVisible();
+    }
+    // Las categorias superiores existen pero estan ocultas para los vendedores.
+    await expect(page.getByText('Platino', { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Tasa \d|Recargo/)).toHaveCount(0);
     await capture(page, info, '09-productos');
   });
 
-  test('nuevo préstamo', async ({ page }, info) => {
+  test('nuevo préstamo: categoría, monto y cuotas con deslizadores', async ({ page }, info) => {
     await page.goto('/loans/new');
     await expect(page.getByRole('heading', { name: 'Nuevo préstamo' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Categoría Platino' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Categoría Bronce' }).click();
+    // Arranca en el maximo de la categoria y baja de $5.000 en $5.000.
+    await expect(page.getByText(/máx\. \$\s50\.000/)).toBeVisible();
+    const monto = page.getByRole('slider', { name: 'Monto' });
+    await monto.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(monto).toHaveAttribute('aria-valuenow', '45000');
+    await expect(page.getByText('Cuota semanal')).toBeVisible();
     await capture(page, info, '10-nuevo-prestamo');
+  });
+
+  test('recibo de una cuota cobrada y talonario en papel', async ({ page }, info) => {
+    await page.goto('/loans?status=DISBURSED');
+    const loans = page.locator('a[href^="/loans/"]:not([href="/loans/new"])');
+    await expect(loans.first()).toBeVisible();
+    // El primer prestamo en cobranza con alguna cuota cobrada.
+    for (let i = 0; i < (await loans.count()); i++) {
+      await loans.nth(i).click();
+      await expect(page.getByText(/de \d+ cobradas/)).toBeVisible();
+      if (await page.getByRole('button', { name: 'Ver recibo' }).count()) break;
+      await page.goBack();
+      await expect(loans.first()).toBeVisible();
+    }
+    await expect(page.getByText(/Talonario en papel/)).toBeVisible();
+    await page.getByRole('button', { name: 'Ver recibo' }).first().click();
+    const recibo = page.getByRole('dialog');
+    await expect(recibo.getByText(/^R-[0-9A-F]{8}-\d{2}$/)).toBeVisible();
+    await expect(recibo.getByText(/^Pesos .* con \d{2}\/100$/)).toBeVisible();
+    await capture(page, info, '07b-recibo-cuota');
   });
 
   test('ganancias protegidas', async ({ page }, info) => {

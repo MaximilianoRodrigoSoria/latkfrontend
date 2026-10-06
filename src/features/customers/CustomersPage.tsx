@@ -1,5 +1,4 @@
 import {
-  Affix,
   Button,
   Card,
   Drawer,
@@ -10,14 +9,22 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
+import { useOpenFromQuery } from '../../shared/useOpenFromQuery';
 import { useDebouncedValue, useDisclosure, useMediaQuery } from '@mantine/hooks';
-import { IconChevronRight, IconPhone, IconSearch, IconUserPlus } from '@tabler/icons-react';
+import {
+  IconChevronRight,
+  IconPhone,
+  IconSearch,
+  IconUser,
+  IconUserPlus,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
+import { ListThumb } from '../../shared/components/ListThumb';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { CustomerForm } from './CustomerForm';
@@ -28,6 +35,8 @@ export function CustomersPage() {
   const [search, setSearch] = useState('');
   const [debounced] = useDebouncedValue(search.trim(), 300);
   const [opened, { open, close }] = useDisclosure(false);
+  // En el celular el alta se abre desde el "+" de la barra inferior.
+  useOpenFromQuery(open, canCreate);
   const mobile = useMediaQuery('(max-width: 48em)');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -85,30 +94,26 @@ export function CustomersPage() {
             to={`/customers/${customer.id}`}
           >
             <Group justify="space-between" wrap="nowrap">
-              <Stack gap={2}>
-                <Text fw={700}>{customer.fullName}</Text>
-                <Text size="sm" c="dimmed">
-                  DNI {customer.dni} · {customer.city}
-                </Text>
-                <Group gap={4}>
-                  <IconPhone size={14} />
-                  <Text size="sm">{customer.phone}</Text>
-                </Group>
-              </Stack>
+              <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                <ListThumb>
+                  <IconUser size={24} stroke={1.8} />
+                </ListThumb>
+                <Stack gap={2} style={{ minWidth: 0 }}>
+                  <Text fw={700}>{customer.fullName}</Text>
+                  <Text size="sm" c="dimmed">
+                    DNI {customer.dni} · {customer.city}
+                  </Text>
+                  <Group gap={4}>
+                    <IconPhone size={14} />
+                    <Text size="sm">{customer.phone}</Text>
+                  </Group>
+                </Stack>
+              </Group>
               <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
             </Group>
           </Card>
         ))}
       </SimpleGrid>
-
-      {canCreate && mobile && !opened && (
-        <Affix position={{ bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20 }}>
-          <Button radius="xl" size="lg" leftSection={<IconUserPlus size={20} />} onClick={open}>
-            Nuevo
-          </Button>
-        </Affix>
-      )}
-
       <Drawer
         opened={opened}
         onClose={close}

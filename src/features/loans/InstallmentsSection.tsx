@@ -1,4 +1,5 @@
 import {
+  Anchor,
   Badge,
   Button,
   Card,
@@ -11,7 +12,14 @@ import {
   Timeline,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowBackUp, IconCash, IconCheck, IconPlayerTrackNext } from '@tabler/icons-react';
+import {
+  IconArrowBackUp,
+  IconCash,
+  IconCheck,
+  IconFileDownload,
+  IconPlayerTrackNext,
+  IconReceipt,
+} from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
@@ -23,6 +31,7 @@ import { WhatsAppButton } from '../../shared/components/WhatsAppButton';
 import { formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { todayIso } from './loanDraft';
+import { ReceiptModal } from './ReceiptModal';
 
 type Action = { kind: 'collect' | 'revert'; installment: InstallmentResponse } | null;
 
@@ -39,6 +48,8 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
   const [action, setAction] = useState<Action>(null);
   const [reason, setReason] = useState('');
   const [opened, modal] = useDisclosure(false);
+  // Recibo de la cuota (se abre solo despues de cobrar, o desde la fila de una cuota cobrada).
+  const [receiptFor, setReceiptFor] = useState<number | null>(null);
 
   const rows = loan.schedule ?? [];
   const collected = rows.filter((r) => r.status === 'COLLECTED').length;
@@ -66,6 +77,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
         queryKey: queryKeys.customerActivity(loan.customerId),
       });
       modal.close();
+      if (action?.kind === 'collect') setReceiptFor(action.installment.number);
       notifySuccess(
         action?.kind === 'collect'
           ? updated.status === 'COMPLETED'
@@ -114,6 +126,20 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             </Button>
           )}
 
+          {canCollect && (
+            <Anchor
+              href="/talonario-cobro.pdf"
+              target="_blank"
+              rel="noopener"
+              size="xs"
+              w="fit-content"
+            >
+              <Group gap={4}>
+                <IconFileDownload size={14} /> Talonario en papel para cobros en efectivo (PDF)
+              </Group>
+            </Anchor>
+          )}
+
           {/* Recordatorio al cliente por WhatsApp: abre el chat con el mensaje ya escrito. */}
           {next?.reminderUrl && (
             <WhatsAppButton href={next.reminderUrl} variant="light" size="md">
@@ -138,6 +164,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
                 onRevert={
                   canRevert && last?.number === row.number ? () => open('revert', row) : undefined
                 }
+                onReceipt={() => setReceiptFor(row.number)}
               />
             ))}
           </Stack>
@@ -235,6 +262,11 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
           </Stack>
         )}
       </Modal>
+      <ReceiptModal
+        loan={loan}
+        row={(loan.schedule ?? []).find((r) => r.number === receiptFor) ?? null}
+        onClose={() => setReceiptFor(null)}
+      />
     </>
   );
 }
@@ -243,10 +275,12 @@ function InstallmentRow({
   row,
   total,
   onRevert,
+  onReceipt,
 }: {
   row: InstallmentResponse;
   total: number;
   onRevert?: () => void;
+  onReceipt?: () => void;
 }) {
   const collected = row.status === 'COLLECTED';
   return (
@@ -280,6 +314,18 @@ function InstallmentRow({
             ? `Cobrada el ${formatDate(row.collectedAt)}${row.collectedByName ? ` · ${row.collectedByName}` : ''}`
             : `Vence el ${formatDate(row.dueDate)}`}
         </Text>
+        {collected && onReceipt && (
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            w="fit-content"
+            px={0}
+            leftSection={<IconReceipt size={14} />}
+            onClick={onReceipt}
+          >
+            Ver recibo
+          </Button>
+        )}
         {onRevert && (
           <Button
             size="compact-xs"

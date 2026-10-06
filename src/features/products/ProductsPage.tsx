@@ -1,12 +1,11 @@
 import {
-  Affix,
+  Anchor,
   Badge,
   Button,
-  Chip,
   Card,
   Drawer,
   Group,
-  ScrollArea,
+  Modal,
   SegmentedControl,
   SimpleGrid,
   Skeleton,
@@ -15,11 +14,12 @@ import {
   Text,
 } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
-import { IconEye, IconEyeOff, IconPlus } from '@tabler/icons-react';
+import { IconCalculator, IconEye, IconEyeOff, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
-import type { OfferOption, ProductResponse } from '../../api/types';
+import type { ProductOffer, ProductResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission } from '../../auth/permissions';
 import { LoansSectionTabs } from '../loans/LoansSectionTabs';
@@ -27,26 +27,26 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import {
   FREQUENCY_LABEL,
   formatDate,
+  formatMoney,
   formatMoneyShort,
   formatRate,
   PERIOD_LABEL,
 } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
-import { LoanAmountCard } from './LoanAmountCard';
-import {
-  applyFilters,
-  availableAmounts,
-  type FrequencyFilter,
-  type OfferFilters,
-} from './offerFilters';
+import { NEW_PARAM, useOpenFromQuery } from '../../shared/useOpenFromQuery';
 import { ProductForm } from './ProductForm';
 import { RevealEarningsModal } from './RevealEarningsModal';
+import { offerAmounts, offerInstallments, offerLabel, rateRange, TierIcon } from './tiers';
 import { useEarnings } from './useEarnings';
 
 export function ProductsPage() {
   const user = useAuthStore((s) => s.user);
   const canManage = hasPermission(user, Permission.PRODUCT_MANAGE);
+  const [params] = useSearchParams();
   const [view, setView] = useState<'offers' | 'manage'>('offers');
+  // El "+" de la barra inferior pide una categoria nueva: se pasa a Administrar.
+  const requested = canManage && params.has(NEW_PARAM);
+  if (requested && view !== 'manage') setView('manage');
 
   return (
     <Stack pb={canManage ? 88 : 0}>
@@ -55,8 +55,8 @@ export function ProductsPage() {
         title="Productos"
         description={
           view === 'offers'
-            ? 'Cuanto podes prestar hoy y en cuantas cuotas'
-            : 'Condiciones con las que se originan los prestamos'
+            ? 'Categorías: hasta cuánto podés prestar y en cuántas cuotas'
+            : 'Condiciones con las que se originan los préstamos'
         }
       />
       {canManage && (
@@ -64,7 +64,7 @@ export function ProductsPage() {
           value={view}
           onChange={(v) => setView(v as 'offers' | 'manage')}
           data={[
-            { value: 'offers', label: 'Ofertas' },
+            { value: 'offers', label: 'Categorías' },
             { value: 'manage', label: 'Administrar' },
           ]}
         />
@@ -80,9 +80,6 @@ function OffersView() {
   const [passwordOpened, password] = useDisclosure(false);
   const { earnings, reveal, hide } = useEarnings();
   const offers = useQuery({ queryKey: queryKeys.offers, queryFn: api.offers });
-  const [filters, setFilters] = useState<OfferFilters>({ frequency: 'ALL', amount: null });
-  const amounts = availableAmounts(offers.data ?? []);
-  const visible = applyFilters(offers.data ?? [], filters);
 
   const confirm = (value: string) =>
     reveal.mutate(value, {
@@ -101,43 +98,8 @@ function OffersView() {
           leftSection={earnings ? <IconEyeOff size={18} /> : <IconEye size={18} />}
           onClick={earnings ? hide : password.open}
         >
-          {earnings ? 'Ocultar mi ganancia' : 'Ver cuanto gano'}
+          {earnings ? 'Ocultar mi ganancia' : 'Ver cuánto gano'}
         </Button>
-      )}
-
-      {offers.data && offers.data.length > 0 && (
-        <Stack gap="xs">
-          <SegmentedControl
-            fullWidth
-            value={filters.frequency}
-            onChange={(value) => setFilters((f) => ({ ...f, frequency: value as FrequencyFilter }))}
-            data={[
-              { value: 'ALL', label: 'Todos' },
-              { value: 'WEEKLY', label: 'Semanal' },
-              { value: 'MONTHLY', label: 'Mensual' },
-            ]}
-          />
-          <ScrollArea type="never">
-            <Chip.Group
-              value={filters.amount === null ? 'ALL' : String(filters.amount)}
-              onChange={(value) =>
-                setFilters((f) => ({
-                  ...f,
-                  amount: value === 'ALL' ? null : Number(value),
-                }))
-              }
-            >
-              <Group gap="xs" wrap="nowrap">
-                <Chip value="ALL">Todos los montos</Chip>
-                {amounts.map((amount) => (
-                  <Chip key={amount} value={String(amount)}>
-                    {formatMoneyShort(amount)}
-                  </Chip>
-                ))}
-              </Group>
-            </Chip.Group>
-          </ScrollArea>
-        </Stack>
       )}
 
       {offers.isLoading && <Skeleton h={120} />}
@@ -146,40 +108,16 @@ function OffersView() {
           No hay productos disponibles hoy.
         </Text>
       )}
-      {offers.data && offers.data.length > 0 && visible.length === 0 && (
-        <Text c="dimmed" ta="center" py="xl">
-          No hay productos con ese filtro.
-        </Text>
-      )}
 
-      {visible.map((offer) => {
-        const withEarnings = earnings?.get(offer.productId);
-        return (
-          <Stack key={offer.productId} gap="xs">
-            <Group justify="space-between" align="baseline">
-              <Text fw={800} size="lg">
-                {offer.productName}
-              </Text>
-              {offer.ratePerPeriod != null && (
-                <Text size="xs" c="dimmed">
-                  Tasa {formatRate(offer.ratePerPeriod)} {PERIOD_LABEL[offer.frequency]}
-                </Text>
-              )}
-            </Group>
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-              {amountsOf(offer.options).map((amount) => (
-                <LoanAmountCard
-                  key={amount}
-                  frequency={offer.frequency}
-                  amount={amount}
-                  options={offer.options.filter((o) => o.amount === amount)}
-                  earnings={withEarnings?.options.filter((o) => o.amount === amount)}
-                />
-              ))}
-            </SimpleGrid>
-          </Stack>
-        );
-      })}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+        {offers.data?.map((offer) => (
+          <CategoryCard
+            key={offer.productId}
+            offer={offer}
+            earnings={earnings?.get(offer.productId)}
+          />
+        ))}
+      </SimpleGrid>
 
       <RevealEarningsModal
         opened={passwordOpened}
@@ -195,14 +133,89 @@ function OffersView() {
   );
 }
 
-function amountsOf(options: OfferOption[]): number[] {
-  return [...new Set(options.map((o) => o.amount))].sort((a, b) => a - b);
+/**
+ * Una categoria: rango de montos y cuotas y lo que se paga por cuota. El vendedor no ve tasas; con
+ * la contrasena confirmada ve hasta cuanto gana. El admin ve recargo y tasas.
+ */
+export function CategoryCard({
+  offer,
+  earnings,
+}: {
+  offer: ProductOffer;
+  earnings?: ProductOffer;
+}) {
+  const amounts = offerAmounts(offer);
+  const installments = offerInstallments(offer);
+  const period = PERIOD_LABEL[offer.frequency];
+  const cuotas = offer.options.map((o) => o.installmentAmount);
+  const rates = rateRange(offer);
+  const maxEarning = earnings
+    ? Math.max(...earnings.options.map((o) => o.totalCommission ?? 0))
+    : null;
+
+  return (
+    <Card withBorder padding="md" radius="md">
+      <Group justify="space-between" wrap="nowrap" mb="xs">
+        <Group gap="sm" wrap="nowrap">
+          <TierIcon tier={offer.tier} size={34} />
+          <div>
+            <Text fw={800} size="lg" lh={1.2}>
+              {offerLabel(offer)}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {FREQUENCY_LABEL[offer.frequency]}
+            </Text>
+          </div>
+        </Group>
+        {!offer.sellerVisible && (
+          <Badge color="orange" variant="light">
+            Oculta por defecto
+          </Badge>
+        )}
+      </Group>
+      <Stack gap={4}>
+        <Text size="sm">
+          Hasta <b>{formatMoneyShort(amounts.at(-1) ?? 0)}</b> · desde{' '}
+          {formatMoneyShort(amounts[0] ?? 0)}
+        </Text>
+        <Text size="sm">
+          De {installments[0]} a {installments.at(-1)} cuotas {period}es
+        </Text>
+        <Text size="sm" c="dimmed">
+          Cuota {period} de {formatMoneyShort(Math.min(...cuotas))} a{' '}
+          {formatMoneyShort(Math.max(...cuotas))}
+        </Text>
+        {offer.surcharge != null && rates && (
+          <Text size="xs" c="orange.8" fw={600}>
+            Recargo +{formatRate(offer.surcharge)} · tasa {formatRate(rates[0])} a{' '}
+            {formatRate(rates[1])} {period}
+          </Text>
+        )}
+        {offer.surcharge == null && offer.ratePerPeriod != null && (
+          <Text size="xs" c="orange.8" fw={600}>
+            Tasa {formatRate(offer.ratePerPeriod)} {period}
+          </Text>
+        )}
+        {maxEarning !== null && (
+          <Text size="sm" c="teal" fw={700}>
+            Ganás hasta {formatMoney(maxEarning)} por préstamo
+          </Text>
+        )}
+      </Stack>
+      <Anchor component={Link} to="/simulator" size="sm" mt="sm">
+        <Group gap={4}>
+          <IconCalculator size={16} /> Simular
+        </Group>
+      </Anchor>
+    </Card>
+  );
 }
 
 function ManageView() {
   const [filter, setFilter] = useState<'available' | 'all'>('all');
   const [opened, { open, close }] = useDisclosure(false);
   const mobile = useMediaQuery('(max-width: 48em)');
+  useOpenFromQuery(open);
   const queryClient = useQueryClient();
   const onlyAvailable = filter === 'available';
 
@@ -230,6 +243,31 @@ function ManageView() {
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.changeProductStatus(id, active),
     onSuccess: refresh,
+    onError: (error) => notifyError(error),
+  });
+
+  const [toDelete, setToDelete] = useState<ProductResponse | null>(null);
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteProduct(id),
+    onSuccess: () => {
+      notifySuccess(`"${toDelete?.name}" dada de baja`);
+      setToDelete(null);
+      refresh();
+    },
+    onError: (error) => notifyError(error),
+  });
+
+  const visibility = useMutation({
+    mutationFn: ({ id, visible }: { id: string; visible: boolean }) =>
+      api.changeProductVisibility(id, visible),
+    onSuccess: (product) => {
+      notifySuccess(
+        product.sellerVisible
+          ? `${product.name}: visible para los vendedores`
+          : `${product.name}: oculta para los vendedores`,
+      );
+      refresh();
+    },
     onError: (error) => notifyError(error),
   });
 
@@ -264,19 +302,44 @@ function ManageView() {
           <ProductCard
             key={product.id}
             product={product}
-            toggling={toggle.isPending && toggle.variables?.id === product.id}
+            toggling={
+              (toggle.isPending && toggle.variables?.id === product.id) ||
+              (visibility.isPending && visibility.variables?.id === product.id)
+            }
             onToggle={(active) => toggle.mutate({ id: product.id, active })}
+            onVisibility={(visible) => visibility.mutate({ id: product.id, visible })}
+            onDelete={() => setToDelete(product)}
           />
         ))}
       </SimpleGrid>
-
-      {mobile && (
-        <Affix position={{ bottom: 'calc(88px + env(safe-area-inset-bottom))', right: 20 }}>
-          <Button radius="xl" size="lg" leftSection={<IconPlus size={20} />} onClick={open}>
-            Nuevo
-          </Button>
-        </Affix>
-      )}
+      <Modal
+        opened={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        title="Dar de baja la categoría"
+        centered
+      >
+        <Stack>
+          <Text size="sm">
+            <b>{toDelete?.name}</b> deja de existir para vendedores y administradores. Los préstamos
+            que ya la usan conservan sus condiciones.
+          </Text>
+          <Text size="sm" c="dimmed">
+            Si solo querés pausarla por un tiempo, usá el interruptor &quot;Activo&quot;.
+          </Text>
+          <Group grow>
+            <Button variant="default" onClick={() => setToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button
+              color="red"
+              loading={remove.isPending}
+              onClick={() => toDelete && remove.mutate(toDelete.id)}
+            >
+              Dar de baja
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Drawer
         opened={opened}
@@ -296,15 +359,25 @@ interface ProductCardProps {
   product: ProductResponse;
   toggling: boolean;
   onToggle: (active: boolean) => void;
+  onVisibility: (visible: boolean) => void;
+  onDelete: () => void;
 }
 
-function ProductCard({ product, toggling, onToggle }: ProductCardProps) {
+function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: ProductCardProps) {
+  const amounts = product.allowedAmounts;
+  const period = PERIOD_LABEL[product.frequency];
+  const rates = Object.entries(product.ratesByInstallments ?? {}).sort(
+    ([a], [b]) => Number(a) - Number(b),
+  );
   return (
     <Card withBorder padding="md">
       <Group justify="space-between" wrap="nowrap" mb="xs">
-        <Text fw={700} lineClamp={1}>
-          {product.name}
-        </Text>
+        <Group gap="xs" wrap="nowrap">
+          <TierIcon tier={product.tier} size={26} />
+          <Text fw={700} lineClamp={1}>
+            {product.tierLabel ?? product.name}
+          </Text>
+        </Group>
         <Badge color={product.availableToday ? 'teal' : 'gray'} variant="light">
           {product.availableToday
             ? 'Disponible'
@@ -317,14 +390,24 @@ function ProductCard({ product, toggling, onToggle }: ProductCardProps) {
         <Text size="sm">
           {FREQUENCY_LABEL[product.frequency]}
           {product.ratePerPeriod != null &&
-            ` · ${formatRate(product.ratePerPeriod)} ${PERIOD_LABEL[product.frequency]}`}
+            (product.tier
+              ? ` · recargo +${formatRate(product.ratePerPeriod)}`
+              : ` · ${formatRate(product.ratePerPeriod)} ${period}`)}
         </Text>
         <Text size="sm" c="dimmed">
-          Montos: {product.allowedAmounts.map(formatMoneyShort).join(' · ')}
+          {product.tier
+            ? `Montos: ${formatMoneyShort(amounts[0] ?? 0)} a ${formatMoneyShort(amounts.at(-1) ?? 0)}, de $5.000 en $5.000`
+            : `Montos: ${amounts.map(formatMoneyShort).join(' · ')}`}
         </Text>
         <Text size="sm" c="dimmed">
-          Cuotas: {product.allowedInstallments.join(' · ')} · Gracia {product.graceDays} dias
+          Cuotas: {product.allowedInstallments[0]} a {product.allowedInstallments.at(-1)} · Gracia{' '}
+          {product.graceDays} días
         </Text>
+        {product.tier && rates.length > 0 && (
+          <Text size="xs" c="dimmed">
+            Tasa {period} por cuotas: {rates.map(([n, r]) => `${n}: ${formatRate(r)}`).join(' · ')}
+          </Text>
+        )}
         {(product.validFrom || product.validTo) && (
           <Text size="xs" c="dimmed">
             Vigencia: {product.validFrom ? formatDate(product.validFrom) : '...'} al{' '}
@@ -332,13 +415,34 @@ function ProductCard({ product, toggling, onToggle }: ProductCardProps) {
           </Text>
         )}
       </Stack>
-      <Switch
-        mt="md"
-        label={product.active ? 'Activo' : 'Inactivo'}
-        checked={product.active}
-        disabled={toggling}
-        onChange={(event) => onToggle(event.currentTarget.checked)}
-      />
+      <Group mt="md" gap="lg">
+        <Switch
+          label={product.active ? 'Activo' : 'Inactivo'}
+          checked={product.active}
+          disabled={toggling}
+          onChange={(event) => onToggle(event.currentTarget.checked)}
+        />
+        <Switch
+          label="Habilitada por defecto para vendedores"
+          checked={product.sellerVisible}
+          disabled={toggling}
+          onChange={(event) => onVisibility(event.currentTarget.checked)}
+        />
+      </Group>
+      <Text size="xs" c="dimmed" mt={6}>
+        A cada vendedor se le pueden asignar otras categorías desde su ficha.
+      </Text>
+      <Group justify="flex-end" mt="xs">
+        <Button
+          variant="subtle"
+          color="red"
+          size="xs"
+          leftSection={<IconTrash size={14} />}
+          onClick={onDelete}
+        >
+          Dar de baja
+        </Button>
+      </Group>
     </Card>
   );
 }

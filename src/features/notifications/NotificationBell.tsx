@@ -9,6 +9,7 @@ import {
   Text,
   ThemeIcon,
   UnstyledButton,
+  Switch,
 } from '@mantine/core';
 import {
   IconAlertTriangle,
@@ -19,12 +20,17 @@ import {
   IconTrash,
   type Icon,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { AppNotification, NotificationTone } from '../../api/types';
 import { WhatsAppIcon } from '../../shared/components/WhatsAppButton';
 import { formatDate } from '../../shared/format';
 import { useNotificationInbox } from './useNotificationInbox';
+import {
+  useNotificationPreferences,
+  unlockAchievementSound,
+  playAchievementSound,
+} from './notificationPreferences';
 
 const LOOK: Record<NotificationTone, { color: string; icon: Icon }> = {
   INFO: { color: 'brand', icon: IconInfoCircle },
@@ -47,6 +53,17 @@ export function timeAgo(iso: string, now = Date.now()): string {
  * los recordatorios de cobro traen el boton para mandarle el mensaje al cliente por WhatsApp.
  */
 export function NotificationBell() {
+  const preferences = useNotificationPreferences();
+  useEffect(() => {
+    if (!preferences.sound) return;
+    const unlock = () => unlockAchievementSound();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [preferences.sound]);
   const { inbox, markRead, markAll, remove, removeRead } = useNotificationInbox();
   const [opened, setOpened] = useState(false);
   const navigate = useNavigate();
@@ -114,6 +131,46 @@ export function NotificationBell() {
             )}
           </Group>
         </Group>
+        <Stack
+          gap="xs"
+          px="sm"
+          py="xs"
+          style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}
+        >
+          <Switch
+            label="Avisos emergentes"
+            checked={preferences.popups}
+            onChange={(e) => preferences.set('popups', e.currentTarget.checked)}
+          />
+          <Switch
+            label="Celebrar objetivos cumplidos"
+            checked={preferences.achievements}
+            onChange={(e) => preferences.set('achievements', e.currentTarget.checked)}
+          />
+          <Switch
+            label="Sonido de logros"
+            checked={preferences.sound}
+            onChange={(e) => {
+              preferences.set('sound', e.currentTarget.checked);
+              if (e.currentTarget.checked) unlockAchievementSound();
+            }}
+          />
+          {preferences.sound && (
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              onClick={() => {
+                unlockAchievementSound();
+                playAchievementSound();
+              }}
+            >
+              Probar sonido
+            </Button>
+          )}
+          <Text size="xs" c="dimmed">
+            Preferencias guardadas en este dispositivo. Los avisos siguen en la campana.
+          </Text>
+        </Stack>
         <ScrollArea.Autosize mah={420}>
           {inbox && inbox.items.length === 0 && (
             <Text size="sm" c="dimmed" ta="center" py="lg">

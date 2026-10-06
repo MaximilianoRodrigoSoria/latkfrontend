@@ -21,6 +21,7 @@ import type {
   ProductResponse,
   SellerContactRequest,
   SellerDataRequest,
+  SellerCategories,
   SellerResponse,
   SimulationRequest,
   SimulationResponse,
@@ -38,6 +39,11 @@ export const api = {
     request<ProductResponse[]>(`/api/v1/products?onlyAvailable=${onlyAvailable}`),
   createProduct: (body: ProductRequest) =>
     request<ProductResponse>('/api/v1/products', { method: 'POST', body }),
+  changeProductVisibility: (id: string, sellerVisible: boolean) =>
+    request<ProductResponse>(`/api/v1/products/${id}/visibility`, {
+      method: 'PATCH',
+      body: { sellerVisible },
+    }),
   changeProductStatus: (id: string, active: boolean) =>
     request<ProductResponse>(`/api/v1/products/${id}/status`, {
       method: 'PATCH',
@@ -101,6 +107,16 @@ export const api = {
       method: 'PUT',
       body: { commissionRate },
     }),
+  sellerCategories: (sellerId: string) =>
+    request<SellerCategories>(`/api/v1/sellers/${sellerId}/categories`),
+  assignSellerCategories: (sellerId: string, productIds: string[]) =>
+    request<SellerCategories>(`/api/v1/sellers/${sellerId}/categories`, {
+      method: 'PUT',
+      body: { productIds },
+    }),
+  resetSellerCategories: (sellerId: string) =>
+    request<SellerCategories>(`/api/v1/sellers/${sellerId}/categories`, { method: 'DELETE' }),
+  deleteProduct: (id: string) => request<void>(`/api/v1/products/${id}`, { method: 'DELETE' }),
   mySellerProfile: () => request<SellerResponse>('/api/v1/sellers/me'),
   updateMySellerProfile: (body: SellerContactRequest) =>
     request<SellerResponse>('/api/v1/sellers/me', { method: 'PUT', body }),
@@ -148,6 +164,7 @@ export const queryKeys = {
   customerActivity: (id: string) => ['customerActivity', id] as const,
   loans: ['loans'] as const,
   sellers: ['sellers'] as const,
+  sellerCategories: (id: string) => ['sellerCategories', id] as const,
   seller: (id: string) => ['seller', id] as const,
   mySellerProfile: ['mySellerProfile'] as const,
   collectionAccount: ['collectionAccount'] as const,

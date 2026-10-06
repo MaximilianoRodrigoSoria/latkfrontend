@@ -21,6 +21,12 @@ const queryClient = new QueryClient({
   },
 });
 
+// Al cambiar de cuenta en esta pestaña se descartan los datos de la anterior: nunca se muestran
+// datos de un usuario con la sesion de otro.
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.userId !== previous.user?.userId) queryClient.clear();
+});
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
