@@ -2,7 +2,6 @@ import {
   Button,
   Group,
   NumberInput,
-  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -15,6 +14,7 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import dayjs from 'dayjs';
 import type { PaymentFrequency, ProductRequest, ProductTier } from '../../api/types';
+import { FREQUENCIES, FREQUENCY_LABEL, PERIOD_LABEL } from '../../shared/format';
 
 /** Las categorias en orden, con su nombre visible. */
 export const TIERS: { value: ProductTier; label: string }[] = [
@@ -139,7 +139,7 @@ export function ProductForm({ submitting, onSubmit }: ProductFormProps) {
     },
   });
 
-  const period = form.values.frequency === 'WEEKLY' ? 'semanal' : 'mensual';
+  const period = PERIOD_LABEL[form.values.frequency];
   const tiered = form.values.tier !== '';
 
   return (
@@ -158,19 +158,14 @@ export function ProductForm({ submitting, onSubmit }: ProductFormProps) {
           }}
         />
         <TextInput label="Nombre" placeholder="Bronce" {...form.getInputProps('name')} />
-        <Stack gap={4}>
-          <Text size="sm" fw={500}>
-            Frecuencia de pago
-          </Text>
-          <SegmentedControl
-            fullWidth
-            data={[
-              { value: 'WEEKLY', label: 'Semanal' },
-              { value: 'MONTHLY', label: 'Mensual' },
-            ]}
-            {...form.getInputProps('frequency')}
-          />
-        </Stack>
+        {/* Ocho frecuencias: un desplegable ocupa una linea, no una fila de botones. */}
+        <Select
+          label="Frecuencia de pago"
+          description="La diaria se cobra todos los días, incluidos domingos y feriados"
+          data={FREQUENCIES.map((f) => ({ value: f, label: FREQUENCY_LABEL[f] }))}
+          allowDeselect={false}
+          {...form.getInputProps('frequency')}
+        />
         <NumberInput
           label={tiered ? `Recargo de la categoría (%)` : `Tasa ${period} (%)`}
           description={

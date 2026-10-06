@@ -31,6 +31,7 @@ const LOOK: Record<CustomerActivityType, { color: string; icon: Icon }> = {
   LOAN_DISBURSED: { color: 'blue', icon: IconSend },
   INSTALLMENT_COLLECTED: { color: 'teal', icon: IconCash },
   INSTALLMENT_REVERTED: { color: 'orange', icon: IconArrowBackUp },
+  INSTALLMENT_PARTIAL: { color: 'cyan', icon: IconCash },
   LOAN_COMPLETED: { color: 'gray', icon: IconCircleCheck },
 };
 
@@ -54,6 +55,8 @@ export function activityTitle(a: CustomerActivity): string {
       return `Dinero transferido${amount}`;
     case 'INSTALLMENT_COLLECTED':
       return `Cuota ${a.installmentNumber} cobrada${a.advance ? ' (adelanto)' : ''}${amount}`;
+    case 'INSTALLMENT_PARTIAL':
+      return `Abono parcial de la cuota ${a.installmentNumber}${amount}`;
     case 'INSTALLMENT_REVERTED':
       return `Cuota ${a.installmentNumber} vuelta a pendiente`;
     case 'LOAN_COMPLETED':

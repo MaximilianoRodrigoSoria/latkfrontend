@@ -27,6 +27,7 @@ export const Permission = {
   PROFILE_MANAGE_OWN: 'profile.manage.own',
   LOAN_READ_OWN: 'loan.read.own',
   LOAN_READ_ALL: 'loan.read.all',
+  LENDING_SETTINGS: 'lending.settings',
 } as const;
 
 export function hasPermission(user: SessionUser | null, permission: string): boolean {

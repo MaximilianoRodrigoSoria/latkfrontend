@@ -11,6 +11,7 @@ import type {
   EarningsResponse,
   LoanRequestBody,
   LoanResponse,
+  LendingSettings,
   LoginRequest,
   PaymentBehavior,
   LoginResponse,
@@ -85,10 +86,15 @@ export const api = {
       method: 'POST',
       body: { reference },
     }),
-  collectInstallment: (id: string, number: number) =>
+  /** Sin monto se cobra lo que falta; con menos, es un abono parcial. */
+  collectInstallment: (id: string, number: number, amount?: number) =>
     request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/collect`, {
       method: 'POST',
+      body: amount == null ? undefined : { amount },
     }),
+  lendingSettings: () => request<LendingSettings>('/api/v1/settings/lending'),
+  changeLendingSettings: (body: Pick<LendingSettings, 'interestMethod'>) =>
+    request<LendingSettings>('/api/v1/settings/lending', { method: 'PUT', body }),
   revertInstallment: (id: string, number: number, reason: string) =>
     request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/revert`, {
       method: 'POST',
@@ -186,6 +192,7 @@ export const queryKeys = {
   customer: (id: string) => ['customer', id] as const,
   customerActivity: (id: string) => ['customerActivity', id] as const,
   customerBehavior: (id: string) => ['customerBehavior', id] as const,
+  lendingSettings: ['lendingSettings'] as const,
   customerNotes: (id: string) => ['customerNotes', id] as const,
   customerReferences: (id: string) => ['customerReferences', id] as const,
   loans: ['loans'] as const,

@@ -129,9 +129,42 @@ export interface ReceiptData {
   loanRef: string;
   collector: string;
   remaining: { amount: number; installments: number };
+  /** Abono parcial: lo que todavia falta de la cuota. */
+  partialRemaining?: number;
 }
 
-export function receiptData(loan: LoanResponse, row: InstallmentResponse): ReceiptData {
+/** Un abono parcial de la cuota (de su historial). */
+export interface PartialPayment {
+  amount: number;
+  at: string;
+  collector: string;
+  /** Lo que falta de la cuota despues de este abono. */
+  remaining: number;
+  /** 1 para el primer abono de la cuota, 2 para el segundo... (va en el numero de recibo). */
+  index: number;
+}
+
+export function receiptData(
+  loan: LoanResponse,
+  row: InstallmentResponse,
+  partial?: PartialPayment,
+): ReceiptData {
+  if (partial) {
+    return {
+      ...receiptData(loan, row),
+      number: `${receiptNumber(loan.id, row.number)}-A${partial.index}`,
+      collectedAt: partial.at,
+      amount: partial.amount,
+      amountInWords: amountInWords(partial.amount),
+      collector: partial.collector,
+      // La cuota sigue pendiente: el saldo incluye esta cuota, menos lo ya abonado.
+      remaining: {
+        amount: remainingAfter(loan, row.number - 1).amount - (row.amount - partial.remaining),
+        installments: remainingAfter(loan, row.number - 1).installments,
+      },
+      partialRemaining: partial.remaining,
+    };
+  }
   return {
     number: receiptNumber(loan.id, row.number),
     collectedAt: row.collectedAt ?? null,
@@ -155,7 +188,9 @@ export function receiptMessage(r: ReceiptData): string {
     '',
     `Recibimos de ${r.customerName}${r.customerDni ? ` (DNI ${r.customerDni})` : ''} la suma de *${formatMoney(r.amount)}*`,
     `(${r.amountInWords})`,
-    `en concepto de la cuota ${r.installment} de ${r.installments} del préstamo ${r.product} Nº ${r.loanRef}.`,
+    r.partialRemaining != null
+      ? `como abono parcial de la cuota ${r.installment} de ${r.installments} del préstamo ${r.product} Nº ${r.loanRef}. Resta de la cuota: ${formatMoney(r.partialRemaining)}.`
+      : `en concepto de la cuota ${r.installment} de ${r.installments} del préstamo ${r.product} Nº ${r.loanRef}.`,
     '',
     r.collectedAt ? `Fecha de cobro: ${formatDateTime(r.collectedAt)}` : '',
     `Cobró: ${r.collector}`,

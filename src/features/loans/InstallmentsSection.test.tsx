@@ -90,8 +90,34 @@ describe('InstallmentsSection', () => {
     expect(await screen.findByText(/queda registrada como adelanto/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Cobrada' }));
 
-    await waitFor(() => expect(collect).toHaveBeenCalledWith('l1', 2));
+    await waitFor(() => expect(collect).toHaveBeenCalledWith('l1', 2, undefined));
     expect(screen.queryByRole('button', { name: /no cobrada/i })).toBeNull();
+  });
+
+  it('un monto menor a la cuota se registra como abono parcial', async () => {
+    signInWith(['collection.register']);
+    const collect = vi.spyOn(api, 'collectInstallment').mockResolvedValue(loan([]));
+    renderSection(loan([row(1, '2026-09-20', 'PENDING'), row(2, '2026-10-20', 'PENDING')]));
+
+    fireEvent.click(screen.getByRole('button', { name: /Cobrar cuota 1/ }));
+    const input = await screen.findByLabelText('Monto cobrado');
+    fireEvent.change(input, { target: { value: '400' } });
+    expect(await screen.findByText(/Abono parcial: van a faltar/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar abono' }));
+
+    await waitFor(() => expect(collect).toHaveBeenCalledWith('l1', 1, 400));
+  });
+
+  it('una cuota con abonos muestra lo que falta', () => {
+    signInWith(['collection.register']);
+    renderSection(
+      loan([
+        { ...row(1, '2026-12-20', 'PENDING'), paidAmount: 300 },
+        row(2, '2026-12-27', 'PENDING'),
+      ]),
+    );
+
+    expect(screen.getByText(/Parcial · faltan/)).toBeTruthy();
   });
 
   it('una cuota vencida se cobra y se marca como vencida', () => {

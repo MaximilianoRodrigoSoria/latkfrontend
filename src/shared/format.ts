@@ -26,11 +26,26 @@ export const formatDate = (iso: string) => dayjs(iso).format('DD/MM/YYYY');
 export const formatDateTime = (iso: string) => dayjs(iso).format('DD/MM/YYYY HH:mm');
 
 export const FREQUENCY_LABEL: Record<PaymentFrequency, string> = {
+  DAILY: 'Diario',
   WEEKLY: 'Semanal',
+  EVERY_10_DAYS: 'Cada 10 días',
+  EVERY_14_DAYS: 'Catorcenal',
+  BIWEEKLY: 'Quincenal',
+  EVERY_20_DAYS: 'Cada 20 días',
+  EVERY_28_DAYS: 'Cada 28 días',
   MONTHLY: 'Mensual',
 };
 
 export const PERIOD_LABEL: Record<PaymentFrequency, string> = {
+  DAILY: 'diaria',
   WEEKLY: 'semanal',
+  EVERY_10_DAYS: 'cada 10 días',
+  EVERY_14_DAYS: 'catorcenal',
+  BIWEEKLY: 'quincenal',
+  EVERY_20_DAYS: 'cada 20 días',
+  EVERY_28_DAYS: 'cada 28 días',
   MONTHLY: 'mensual',
 };
+
+/** En el orden en que se ofrecen, de la mas corta a la mas larga. */
+export const FREQUENCIES = Object.keys(FREQUENCY_LABEL) as PaymentFrequency[];

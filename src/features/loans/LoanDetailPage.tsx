@@ -23,10 +23,17 @@ import { api, queryKeys } from '../../api/endpoints';
 import type { LoanResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
-import { FREQUENCY_LABEL, formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
+import {
+  FREQUENCY_LABEL,
+  formatDate,
+  formatMoney,
+  formatMoneyShort,
+  formatRate,
+} from '../../shared/format';
 import { DisbursementCard } from './DisbursementCard';
 import { InstallmentsSection } from './InstallmentsSection';
 import { LoanDecisionActions } from './LoanDecisionActions';
+import { INTEREST_METHOD_LABEL } from '../settings/LendingSettingsPage';
 import { CustomerBehaviorCard } from '../customers/CustomerBehavior';
 import { STATUS_COLOR, STATUS_LABEL } from './loanDraft';
 
@@ -100,6 +107,13 @@ export function LoanDetailPage() {
                 value={`${l.installments} de ${formatMoneyShort(l.installmentAmount)}`}
               />
               <Row label="Total a devolver" value={formatMoneyShort(l.totalToRepay)} strong />
+              {/* Solo quien ve tasas (admin): con que metodo se calculo este prestamo. */}
+              {l.interestMethod && l.ratePerPeriod != null && (
+                <Row
+                  label="Cálculo"
+                  value={`${INTEREST_METHOD_LABEL[l.interestMethod]} · ${formatRate(l.ratePerPeriod)}${l.interestMethod === 'FLAT' ? ' del plazo' : ' por cuota'}`}
+                />
+              )}
               {l.notes && <Row label="Notas del vendedor" value={l.notes} />}
             </Stack>
           </Card>

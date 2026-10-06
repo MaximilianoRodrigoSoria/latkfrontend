@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import type { InstallmentResponse, LoanResponse } from '../../api/types';
 import { formatDateTime, formatMoney } from '../../shared/format';
 import { ShareButton } from '../../shared/share/ShareButton';
-import { receiptData, receiptMessage, type ReceiptData } from './receipt';
+import { receiptData, receiptMessage, type PartialPayment, type ReceiptData } from './receipt';
 
 /**
  * Recibo de una cuota cobrada (por ejemplo en efectivo, en persona): para mandarlo por WhatsApp o
@@ -13,14 +13,17 @@ import { receiptData, receiptMessage, type ReceiptData } from './receipt';
 export function ReceiptModal({
   loan,
   row,
+  partial,
   onClose,
 }: {
   loan: LoanResponse;
   row: InstallmentResponse | null;
+  /** Recibo de un abono parcial (la cuota sigue pendiente). */
+  partial?: PartialPayment;
   onClose: () => void;
 }) {
   const ticket = useRef<HTMLDivElement>(null);
-  const data = row ? receiptData(loan, row) : null;
+  const data = row ? receiptData(loan, row, partial) : null;
 
   return (
     <Modal opened={row !== null} onClose={onClose} title="Recibo de pago" centered>
@@ -94,7 +97,14 @@ export function ReceiptTicket({ data }: { data: ReceiptData }) {
       </Text>
       <Divider my="sm" variant="dashed" />
       <Stack gap={4}>
-        {row('Concepto', `Cuota ${data.installment} de ${data.installments}`)}
+        {row(
+          'Concepto',
+          data.partialRemaining != null
+            ? `Abono parcial · cuota ${data.installment} de ${data.installments}`
+            : `Cuota ${data.installment} de ${data.installments}`,
+        )}
+        {data.partialRemaining != null &&
+          row('Resta de la cuota', formatMoney(data.partialRemaining))}
         {row('Préstamo', `${data.product} · Nº ${data.loanRef}`)}
         {data.collectedAt && row('Fecha de cobro', formatDateTime(data.collectedAt))}
         {row('Cobró', data.collector)}

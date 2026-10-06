@@ -1,7 +1,24 @@
 // Contratos de la API v1 (espejo de los DTO del backend).
 // Cuando el backend corra, se pueden regenerar desde /latk-api/api-docs con openapi-typescript.
 
-export type PaymentFrequency = 'WEEKLY' | 'MONTHLY';
+export type PaymentFrequency =
+  | 'DAILY'
+  | 'WEEKLY'
+  | 'EVERY_10_DAYS'
+  | 'EVERY_14_DAYS'
+  | 'BIWEEKLY'
+  | 'EVERY_20_DAYS'
+  | 'EVERY_28_DAYS'
+  | 'MONTHLY';
+
+/** FRENCH: tasa por periodo. FLAT: interes plano, tasa por todo el plazo. Solo lo ve el admin. */
+export type InterestMethod = 'FRENCH' | 'FLAT';
+
+export interface LendingSettings {
+  interestMethod: InterestMethod;
+  updatedAt?: string | null;
+  updatedByName?: string | null;
+}
 export type ThemeRadius = 'XS' | 'SM' | 'MD' | 'LG' | 'XL';
 export type ColorSchemeSetting = 'LIGHT' | 'DARK' | 'AUTO';
 
@@ -208,18 +225,22 @@ export interface InstallmentResponse {
   overdue: boolean;
   collectedAt?: string | null;
   collectedByName?: string | null;
+  /** Abonado de una cuota pendiente (pagos parciales). */
+  paidAmount?: number | null;
   /** Pendiente y con telefono del cliente: link wa.me con el recordatorio ya escrito. */
   reminderUrl?: string | null;
 }
 
 export interface InstallmentEventResponse {
   number: number;
-  type: 'COLLECTED' | 'REVERTED';
+  type: 'COLLECTED' | 'REVERTED' | 'PARTIAL';
   /** Cobro de una cuota que todavia no vencia. */
   advance: boolean;
   actorName: string;
   reason?: string | null;
   occurredAt: string;
+  /** Monto cobrado, abonado o revertido. */
+  amount?: number | null;
 }
 
 export interface LoanRequestBody {
@@ -245,6 +266,8 @@ export interface LoanResponse {
   frequency: PaymentFrequency;
   /** Ausente para vendedores: no ven la tasa. */
   ratePerPeriod?: number;
+  /** Ausente para vendedores. */
+  interestMethod?: InterestMethod;
   principal: number;
   installments: number;
   installmentAmount: number;
@@ -453,6 +476,7 @@ export type CustomerActivityType =
   | 'LOAN_DISBURSED'
   | 'INSTALLMENT_COLLECTED'
   | 'INSTALLMENT_REVERTED'
+  | 'INSTALLMENT_PARTIAL'
   | 'LOAN_COMPLETED';
 
 /** Puntualidad del cliente sobre sus cuotas vencidas o cobradas. */

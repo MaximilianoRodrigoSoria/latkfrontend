@@ -1,12 +1,13 @@
 import {
+  IconAdjustments,
   IconBuildingBank,
-  IconId,
-  IconKey,
-  IconUserDollar,
   IconCash,
   IconCoin,
   IconHome,
+  IconId,
+  IconKey,
   IconPalette,
+  IconUserDollar,
   IconUsers,
   type Icon,
 } from '@tabler/icons-react';
@@ -74,6 +75,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Cuenta para rendiciones',
     icon: IconBuildingBank,
     permissions: [Permission.PARAMETER_MANAGE],
+    menuOnly: true,
+  },
+  {
+    to: '/settings/lending',
+    label: 'Configuración de créditos',
+    icon: IconAdjustments,
+    permissions: [Permission.LENDING_SETTINGS],
     menuOnly: true,
   },
   {

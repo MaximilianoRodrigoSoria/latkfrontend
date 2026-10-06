@@ -5,6 +5,7 @@ import {
   Card,
   Group,
   Modal,
+  NumberInput,
   Progress,
   Stack,
   Text,
@@ -23,7 +24,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
-import type { InstallmentResponse, LoanResponse } from '../../api/types';
+import type { InstallmentEventResponse, InstallmentResponse, LoanResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, isSeller, Permission } from '../../auth/permissions';
 import { CollectionAccountCard } from '../settings/CollectionAccountCard';
@@ -32,6 +33,7 @@ import { formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { todayIso } from './loanDraft';
 import { ReceiptModal } from './ReceiptModal';
+import type { PartialPayment } from './receipt';
 import { paymentDelay } from './collectionState';
 import { Foldable } from '../../shared/components/Foldable';
 
@@ -50,8 +52,14 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
   const [action, setAction] = useState<Action>(null);
   const [reason, setReason] = useState('');
   const [opened, modal] = useDisclosure(false);
-  // Recibo de la cuota (se abre solo despues de cobrar, o desde la fila de una cuota cobrada).
-  const [receiptFor, setReceiptFor] = useState<number | null>(null);
+  // Recibo de la cuota (se abre solo despues de cobrar, o desde la fila de una cuota cobrada). Con
+  // `partial`, el recibo de un abono parcial.
+  const [receiptFor, setReceiptFor] = useState<{
+    number: number;
+    partial?: PartialPayment;
+  } | null>(null);
+  // Monto a cobrar: por defecto lo que falta de la cuota; menos es un abono parcial.
+  const [amount, setAmount] = useState<number | ''>('');
 
   const rows = loan.schedule ?? [];
   const collected = rows.filter((r) => r.status === 'COLLECTED').length;
@@ -62,14 +70,21 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
   const open = (kind: 'collect' | 'revert', installment: InstallmentResponse) => {
     setAction({ kind, installment });
     setReason('');
+    setAmount(remainingOf(installment));
     modal.open();
   };
+  const owed = action ? remainingOf(action.installment) : 0;
+  const isPartial = action?.kind === 'collect' && amount !== '' && amount > 0 && amount < owed;
 
   const mutation = useMutation({
     mutationFn: () => {
       if (!action) throw new Error('Sin accion');
       return action.kind === 'collect'
-        ? api.collectInstallment(loan.id, action.installment.number)
+        ? api.collectInstallment(
+            loan.id,
+            action.installment.number,
+            isPartial ? Number(amount) : undefined,
+          )
         : api.revertInstallment(loan.id, action.installment.number, reason.trim());
     },
     onSuccess: (updated) => {
@@ -79,12 +94,17 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
         queryKey: queryKeys.customerActivity(loan.customerId),
       });
       modal.close();
-      if (action?.kind === 'collect') setReceiptFor(action.installment.number);
+      if (action?.kind === 'collect') {
+        const n = action.installment.number;
+        setReceiptFor({ number: n, partial: isPartial ? lastPartial(updated, n) : undefined });
+      }
       notifySuccess(
         action?.kind === 'collect'
-          ? updated.status === 'COMPLETED'
-            ? `Cuota ${action.installment.number} cobrada. ¡Préstamo finalizado!`
-            : `Cuota ${action.installment.number} cobrada`
+          ? isPartial
+            ? `Abono de ${formatMoneyShort(Number(amount))} a la cuota ${action.installment.number}`
+            : updated.status === 'COMPLETED'
+              ? `Cuota ${action.installment.number} cobrada. ¡Préstamo finalizado!`
+              : `Cuota ${action.installment.number} cobrada`
           : `Cuota ${action?.installment.number} vuelve a pendiente`,
       );
     },
@@ -123,8 +143,8 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
               onClick={() => open('collect', next)}
             >
               {isAdvance(next)
-                ? `Adelantar cuota ${next.number} · ${formatMoneyShort(next.amount)}`
-                : `Cobrar cuota ${next.number} · ${formatMoneyShort(next.amount)}`}
+                ? `Adelantar cuota ${next.number} · ${formatMoneyShort(remainingOf(next))}`
+                : `Cobrar cuota ${next.number} · ${formatMoneyShort(remainingOf(next))}`}
             </Button>
           )}
 
@@ -164,9 +184,13 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
                 row={row}
                 total={rows.length}
                 onRevert={
-                  canRevert && last?.number === row.number ? () => open('revert', row) : undefined
+                  canRevert &&
+                  (last?.number === row.number ||
+                    (row.status === 'PENDING' && (row.paidAmount ?? 0) > 0))
+                    ? () => open('revert', row)
+                    : undefined
                 }
-                onReceipt={() => setReceiptFor(row.number)}
+                onReceipt={() => setReceiptFor({ number: row.number })}
               />
             ))}
           </Stack>
@@ -189,14 +213,16 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             {[...loan.history].reverse().map((e, index) => (
               <Timeline.Item
                 key={`${e.occurredAt}-${index}`}
-                color={e.type === 'COLLECTED' ? 'teal' : 'red'}
+                color={e.type === 'COLLECTED' ? 'teal' : e.type === 'PARTIAL' ? 'cyan' : 'red'}
                 bullet={
-                  e.type === 'COLLECTED' ? <IconCheck size={12} /> : <IconArrowBackUp size={12} />
+                  e.type === 'REVERTED' ? <IconArrowBackUp size={12} /> : <IconCheck size={12} />
                 }
                 title={
                   e.type === 'COLLECTED'
                     ? `Cuota ${e.number} cobrada${e.advance ? ' (adelanto)' : ''}`
-                    : `Cuota ${e.number} vuelta a pendiente`
+                    : e.type === 'PARTIAL'
+                      ? `Abono de ${formatMoneyShort(e.amount ?? 0)} a la cuota ${e.number}`
+                      : `Cuota ${e.number} vuelta a pendiente`
                 }
               >
                 <Text size="xs" c="dimmed">
@@ -218,7 +244,9 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             ? isAdvance(action.installment)
               ? 'Adelantar cuota'
               : 'Registrar cobro'
-            : 'Marcar como no cobrada'
+            : action?.installment.status === 'PENDING'
+              ? 'Anular abonos'
+              : 'Marcar como no cobrada'
         }
       >
         {action && (
@@ -226,9 +254,29 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             {action.kind === 'collect' ? (
               <>
                 <Text size="sm">
-                  ¿Cobraste <b>{formatMoney(action.installment.amount)}</b> a{' '}
-                  <b>{loan.customerName}</b>? Cuota {action.installment.number} de {rows.length}.
+                  Cuota {action.installment.number} de {rows.length} de <b>{loan.customerName}</b>
+                  {(action.installment.paidAmount ?? 0) > 0
+                    ? `: ya abonó ${formatMoney(action.installment.paidAmount ?? 0)}, faltan ${formatMoney(owed)}.`
+                    : `: ${formatMoney(owed)}.`}
                 </Text>
+                <NumberInput
+                  label="Monto cobrado"
+                  description="Si el cliente pagó una parte, poné cuánto: la cuota queda pendiente hasta completarla."
+                  prefix="$ "
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  min={1}
+                  max={owed}
+                  allowNegative={false}
+                  value={amount}
+                  onChange={(v) => setAmount(typeof v === 'number' ? v : '')}
+                  data-autofocus
+                />
+                {isPartial && (
+                  <Text size="sm" c="cyan">
+                    Abono parcial: van a faltar {formatMoney(owed - Number(amount))} de esta cuota.
+                  </Text>
+                )}
                 {isAdvance(action.installment) && (
                   <Text size="sm" c="blue">
                     Vence el {formatDate(action.installment.dueDate)}: queda registrada como
@@ -260,9 +308,17 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
                 color={action.kind === 'collect' ? 'teal' : 'red'}
                 onClick={() => mutation.mutate()}
                 loading={mutation.isPending}
-                disabled={action.kind === 'revert' && !reason.trim()}
+                disabled={
+                  action.kind === 'revert'
+                    ? !reason.trim()
+                    : amount === '' || amount <= 0 || amount > owed
+                }
               >
-                {action.kind === 'collect' ? 'Cobrada' : 'Corregir'}
+                {action.kind === 'collect'
+                  ? isPartial
+                    ? 'Registrar abono'
+                    : 'Cobrada'
+                  : 'Corregir'}
               </Button>
             </Group>
           </Stack>
@@ -270,7 +326,8 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
       </Modal>
       <ReceiptModal
         loan={loan}
-        row={(loan.schedule ?? []).find((r) => r.number === receiptFor) ?? null}
+        row={(loan.schedule ?? []).find((r) => r.number === receiptFor?.number) ?? null}
+        partial={receiptFor?.partial}
         onClose={() => setReceiptFor(null)}
       />
     </>
@@ -313,6 +370,10 @@ function InstallmentRow({
                 Cobrada a tiempo
               </Badge>
             )
+          ) : (row.paidAmount ?? 0) > 0 ? (
+            <Badge size="xs" color={row.overdue ? 'red' : 'cyan'} variant="light">
+              Parcial · faltan {formatMoneyShort(row.amount - (row.paidAmount ?? 0))}
+            </Badge>
           ) : row.overdue ? (
             <Badge size="xs" color="red" variant="light">
               Vencida
@@ -350,7 +411,7 @@ function InstallmentRow({
             leftSection={<IconArrowBackUp size={14} />}
             onClick={onRevert}
           >
-            Marcar no cobrada
+            {row.status === 'PENDING' ? 'Anular abonos' : 'Marcar no cobrada'}
           </Button>
         )}
       </Stack>
@@ -359,4 +420,26 @@ function InstallmentRow({
       </Text>
     </Group>
   );
+}
+
+/** Lo que falta para completar la cuota (descontando abonos parciales). */
+function remainingOf(row: InstallmentResponse): number {
+  return row.status === 'COLLECTED' ? 0 : row.amount - (row.paidAmount ?? 0);
+}
+
+/** El ultimo abono parcial de la cuota, para su recibo. */
+function lastPartial(loan: LoanResponse, number: number): PartialPayment | undefined {
+  const partials = (loan.history ?? []).filter(
+    (e: InstallmentEventResponse) => e.type === 'PARTIAL' && e.number === number,
+  );
+  const lastEvent = partials.at(-1);
+  const row = (loan.schedule ?? []).find((r) => r.number === number);
+  if (!lastEvent || !row) return undefined;
+  return {
+    amount: lastEvent.amount ?? 0,
+    at: lastEvent.occurredAt,
+    collector: lastEvent.actorName,
+    remaining: remainingOf(row),
+    index: partials.length,
+  };
 }

@@ -55,6 +55,11 @@ const CollectionAccountPage = lazy(() =>
     default: m.CollectionAccountPage,
   })),
 );
+const LendingSettingsPage = lazy(() =>
+  import('../features/settings/LendingSettingsPage').then((m) => ({
+    default: m.LendingSettingsPage,
+  })),
+);
 const ThemeSettingsPage = lazy(() =>
   import('../features/settings/ThemeSettingsPage').then((m) => ({ default: m.ThemeSettingsPage })),
 );
@@ -171,6 +176,14 @@ export const router = createBrowserRouter([
         // Las estadisticas viven en Inicio; se mantiene la ruta por links viejos.
         path: 'stats',
         element: <Navigate to="/" replace />,
+      },
+      {
+        path: 'settings/lending',
+        element: (
+          <RequirePermission permission={Permission.LENDING_SETTINGS}>
+            <LendingSettingsPage />
+          </RequirePermission>
+        ),
       },
       {
         path: 'settings/theme',

@@ -77,6 +77,19 @@ test.describe('vendedor', () => {
     await expect(page.getByText('Ana Referencia')).toHaveCount(0);
   });
 
+  test('abono parcial de una cuota con su recibo', async ({ page }, info) => {
+    await page.goto('/loans?status=DISBURSED');
+    await page.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();
+    await page.getByRole('button', { name: /^(Cobrar|Adelantar) cuota \d+/ }).click();
+    await page.getByLabel('Monto cobrado').fill('1000');
+    await expect(page.getByText(/Abono parcial: van a faltar/)).toBeVisible();
+    await page.getByRole('button', { name: 'Registrar abono' }).click();
+    await expect(page.getByText(/^Abono parcial · cuota \d+ de \d+$/)).toBeVisible();
+    await capture(page, info, '07d-recibo-abono-parcial');
+    await page.keyboard.press('Escape');
+    await expect(page.getByText(/^Parcial · faltan/).first()).toBeVisible();
+  });
+
   test('cuotas con puntualidad e historial plegado', async ({ page }, info) => {
     await page.goto('/loans?status=DISBURSED');
     // Un prestamo con al menos una cuota cobrada.

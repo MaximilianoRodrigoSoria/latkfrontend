@@ -53,6 +53,36 @@ test.describe('administrador', () => {
     await capture(page, info, '06-admin-cuenta-rendiciones');
   });
 
+  test('configuración de créditos: francés o interés plano', async ({ page }, info) => {
+    // Es una configuracion global: se prueba en un solo dispositivo para no cruzarse con otras
+    // pruebas que corren en paralelo.
+    test.skip(info.project.name !== 'escritorio', 'configuracion global');
+    await page.goto('/settings/lending');
+    await expect(page.getByRole('heading', { name: 'Configuración de créditos' })).toBeVisible();
+    const flat = page.getByRole('radio', { name: 'Interés plano' });
+    const french = page.getByRole('radio', { name: 'Amortización francesa' });
+    // Se guarda al elegir: el estado cambia cuando responde el servidor.
+    if (await flat.isChecked()) {
+      await french.click();
+      await expect(french).toBeChecked();
+    }
+    await flat.click();
+    await expect(flat).toBeChecked();
+    await expect(page.getByText('Créditos nuevos con Interés plano')).toBeVisible();
+    await capture(page, info, '06b-admin-config-creditos');
+    // Se deja como estaba.
+    await french.click();
+    await expect(french).toBeChecked();
+  });
+
+  test('productos: frecuencias nuevas en el formulario', async ({ page }) => {
+    await page.goto('/products?nuevo=1');
+    await page.getByRole('combobox', { name: 'Frecuencia de pago' }).click();
+    for (const label of ['Diario', 'Catorcenal', 'Quincenal', 'Cada 28 días']) {
+      await expect(page.getByRole('option', { name: label })).toBeVisible();
+    }
+  });
+
   test('tema', async ({ page }, info) => {
     await page.goto('/settings/theme');
     await expect(page.getByRole('heading', { name: 'Design system' })).toBeVisible();
