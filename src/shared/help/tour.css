@@ -40,6 +40,20 @@
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 3px;
 }
+
+.latk-tour .latk-tour-sound {
+  display: block;
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 8px;
+  background: var(--mantine-color-default);
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
 .latk-tour .driver-popover-arrow-side-left {
   border-left-color: var(--mantine-color-body);
 }

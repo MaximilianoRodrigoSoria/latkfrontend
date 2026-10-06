@@ -4,8 +4,20 @@ import { driver } from 'driver.js';
 import type { SessionUser } from '../../auth/jwt';
 import { Permission } from '../../auth/permissions';
 import { tourTips, useGuidedTour, visibleTourSteps } from './useGuidedTour';
+import {
+  playTourStepSound,
+  unlockAchievementSound,
+  useNotificationPreferences,
+} from '../../features/notifications/notificationPreferences';
 
 vi.mock('driver.js', () => ({ driver: vi.fn(() => ({ drive: vi.fn(), destroy: vi.fn() })) }));
+vi.mock('../../features/notifications/notificationPreferences', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../features/notifications/notificationPreferences')
+  >()),
+  playTourStepSound: vi.fn(),
+  unlockAchievementSound: vi.fn(),
+}));
 const user = (permissions: string[] = [], roles = ['SELLER']): SessionUser => ({
   userId: 'demo',
   username: 'demo',
@@ -19,9 +31,61 @@ afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
   document.body.replaceChildren();
+  useNotificationPreferences.getState().set('tourSound', true);
 });
 
 describe('guided help', () => {
+  it('unlocks audio on user interaction and sounds once per step change', () => {
+    vi.useFakeTimers();
+    const session = user();
+    const { result } = renderHook(() => useGuidedTour('/loans', session));
+    act(() => result.current());
+    expect(unlockAchievementSound).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(180));
+    const config = vi.mocked(driver).mock.calls[0]![0]!;
+    const instance = vi.mocked(driver).mock.results[0]!.value;
+    const highlight = (index: number) =>
+      config.onHighlightStarted?.(
+        undefined,
+        {},
+        { config, driver: instance, index, state: { activeIndex: index } },
+      );
+    highlight(0);
+    expect(playTourStepSound).not.toHaveBeenCalled();
+    highlight(1);
+    highlight(1);
+    expect(playTourStepSound).toHaveBeenCalledOnce();
+    highlight(0);
+    expect(playTourStepSound).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers a persistent mute control without duplicating it on render', () => {
+    vi.useFakeTimers();
+    const session = user();
+    const { result } = renderHook(() => useGuidedTour('/loans', session));
+    act(() => {
+      result.current();
+      vi.advanceTimersByTime(180);
+    });
+    const config = vi.mocked(driver).mock.calls[0]![0]!;
+    const instance = vi.mocked(driver).mock.results[0]!.value;
+    const wrapper = document.createElement('div');
+    const closeButton = document.createElement('button');
+    const popover = { wrapper, closeButton } as unknown as Parameters<
+      NonNullable<typeof config.onPopoverRender>
+    >[0];
+    const options = { config, driver: instance, index: 0, state: {} };
+    config.onPopoverRender?.(popover, options);
+    config.onPopoverRender?.(popover, options);
+    expect(wrapper.querySelectorAll('.latk-tour-sound')).toHaveLength(1);
+    const sound = wrapper.querySelector<HTMLButtonElement>('.latk-tour-sound')!;
+    expect(sound.getAttribute('aria-pressed')).toBe('true');
+    sound.click();
+    expect(useNotificationPreferences.getState().tourSound).toBe(false);
+    expect(sound.textContent).toBe('Sonido: silenciado');
+    config.onPopoverRender?.(popover, options);
+    expect(wrapper.querySelector('button')?.getAttribute('aria-pressed')).toBe('false');
+  });
   it('only explains management actions to accounts with permission', () => {
     expect(tourTips('/loans', user()).some((tip) => tip.title === 'Revisar solicitudes')).toBe(
       false,

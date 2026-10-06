@@ -5,7 +5,8 @@ interface Preferences {
   popups: boolean;
   achievements: boolean;
   sound: boolean;
-  set: (key: 'popups' | 'achievements' | 'sound', value: boolean) => void;
+  tourSound: boolean;
+  set: (key: 'popups' | 'achievements' | 'sound' | 'tourSound', value: boolean) => void;
 }
 
 export const useNotificationPreferences = create<Preferences>()(
@@ -14,6 +15,7 @@ export const useNotificationPreferences = create<Preferences>()(
       popups: true,
       achievements: true,
       sound: false,
+      tourSound: true,
       set: (key, value) => set({ [key]: value }),
     }),
     { name: 'latk-notification-preferences' },
@@ -50,4 +52,30 @@ export function playAchievementSound() {
       volume.disconnect();
     };
   });
+}
+
+/** Short, quiet cue for guided steps, separate from achievement sounds. */
+export function playTourStepSound() {
+  if (!useNotificationPreferences.getState().tourSound || audio?.state !== 'running') return;
+  try {
+    const oscillator = audio.createOscillator();
+    const volume = audio.createGain();
+    const start = audio.currentTime;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(660, start);
+    oscillator.frequency.exponentialRampToValueAtTime(880, start + 0.08);
+    volume.gain.setValueAtTime(0, start);
+    volume.gain.linearRampToValueAtTime(0.025, start + 0.01);
+    volume.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
+    oscillator.connect(volume);
+    volume.connect(audio.destination);
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      volume.disconnect();
+    };
+    oscillator.start(start);
+    oscillator.stop(start + 0.12);
+  } catch {
+    // A browser that blocks audio must not interrupt the guide.
+  }
 }

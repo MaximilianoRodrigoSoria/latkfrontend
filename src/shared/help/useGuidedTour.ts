@@ -2,6 +2,11 @@ import { driver, type DriveStep, type Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './tour.css';
 import { useEffect, useRef } from 'react';
+import {
+  playTourStepSound,
+  unlockAchievementSound,
+  useNotificationPreferences,
+} from '../../features/notifications/notificationPreferences';
 import type { SessionUser } from '../../auth/jwt';
 import { hasPermission, isSeller, Permission } from '../../auth/permissions';
 
@@ -191,12 +196,14 @@ export function useGuidedTour(path: string, user: SessionUser | null) {
   );
 
   return () => {
+    unlockAchievementSound();
     if (pending.current) clearTimeout(pending.current);
     active.current?.destroy();
     // Let Mantine close its menu and restore focus before opening the guide.
     pending.current = setTimeout(() => {
       pending.current = null;
       const focus = document.querySelector<HTMLElement>('[data-tour="account"]');
+      let lastStep: number | undefined;
       active.current = driver({
         steps: visibleTourSteps(tourTips(path, user)),
         popoverClass: 'latk-tour',
@@ -208,8 +215,30 @@ export function useGuidedTour(path: string, user: SessionUser | null) {
         animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
         allowClose: true,
         disableActiveInteraction: true,
+        onHighlightStarted: (_element, _step, { state }) => {
+          if (lastStep !== undefined && state.activeIndex !== lastStep) playTourStepSound();
+          lastStep = state.activeIndex;
+        },
         onPopoverRender: (popover) => {
           popover.closeButton.setAttribute('aria-label', 'Cerrar guía');
+          popover.wrapper.querySelector('.latk-tour-sound')?.remove();
+          const sound = document.createElement('button');
+          sound.type = 'button';
+          sound.className = 'latk-tour-sound';
+          const update = () => {
+            const enabled = useNotificationPreferences.getState().tourSound;
+            sound.textContent = enabled ? 'Sonido: activado' : 'Sonido: silenciado';
+            sound.setAttribute('aria-pressed', String(enabled));
+            sound.setAttribute('aria-label', 'Sonido de los pasos de la guía');
+          };
+          update();
+          sound.addEventListener('click', () => {
+            const preferences = useNotificationPreferences.getState();
+            preferences.set('tourSound', !preferences.tourSound);
+            unlockAchievementSound();
+            update();
+          });
+          popover.wrapper.append(sound);
         },
         onDestroyed: () => {
           if (focus?.isConnected) focus.focus({ preventScroll: true });
