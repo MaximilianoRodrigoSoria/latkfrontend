@@ -2,6 +2,8 @@ import { request } from './http';
 import type {
   CollectionAccount,
   CustomerActivity,
+  CustomerNote,
+  CustomerReference,
   CustomerRequest,
   CustomerResponse,
   CustomerSummary,
@@ -10,6 +12,7 @@ import type {
   LoanRequestBody,
   LoanResponse,
   LoginRequest,
+  PaymentBehavior,
   LoginResponse,
   NewSellerRequest,
   NotificationInbox,
@@ -138,6 +141,26 @@ export const api = {
 
   customerActivity: (customerId: string) =>
     request<CustomerActivity[]>(`/api/v1/customers/${customerId}/activity`),
+  customerBehavior: (customerId: string) =>
+    request<PaymentBehavior>(`/api/v1/customers/${customerId}/behavior`),
+  customerNotes: (customerId: string) =>
+    request<CustomerNote[]>(`/api/v1/customers/${customerId}/notes`),
+  addCustomerNote: (customerId: string, text: string) =>
+    request<CustomerNote>(`/api/v1/customers/${customerId}/notes`, {
+      method: 'POST',
+      body: { text },
+    }),
+  customerReferences: (customerId: string) =>
+    request<CustomerReference[]>(`/api/v1/customers/${customerId}/references`),
+  addCustomerReference: (customerId: string, body: Omit<CustomerReference, 'id'>) =>
+    request<CustomerReference>(`/api/v1/customers/${customerId}/references`, {
+      method: 'POST',
+      body,
+    }),
+  removeCustomerReference: (customerId: string, referenceId: string) =>
+    request<void>(`/api/v1/customers/${customerId}/references/${referenceId}`, {
+      method: 'DELETE',
+    }),
 
   portfolioStats: () => request<PortfolioStats>('/api/v1/stats/portfolio'),
 
@@ -162,6 +185,9 @@ export const queryKeys = {
   customers: (search: string) => ['customers', { search }] as const,
   customer: (id: string) => ['customer', id] as const,
   customerActivity: (id: string) => ['customerActivity', id] as const,
+  customerBehavior: (id: string) => ['customerBehavior', id] as const,
+  customerNotes: (id: string) => ['customerNotes', id] as const,
+  customerReferences: (id: string) => ['customerReferences', id] as const,
   loans: ['loans'] as const,
   sellers: ['sellers'] as const,
   sellerCategories: (id: string) => ['sellerCategories', id] as const,

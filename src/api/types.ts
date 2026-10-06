@@ -455,6 +455,36 @@ export type CustomerActivityType =
   | 'INSTALLMENT_REVERTED'
   | 'LOAN_COMPLETED';
 
+/** Puntualidad del cliente sobre sus cuotas vencidas o cobradas. */
+export type PaymentRating = 'NO_HISTORY' | 'PUNCTUAL' | 'REGULAR' | 'RISKY';
+export interface PaymentBehavior {
+  evaluated: number;
+  onTime: number;
+  late: number;
+  overdueNow: number;
+  /** De 0 a 100. */
+  onTimePercent: number;
+  averageDaysLate: number;
+  maxDaysLate: number;
+  rating: PaymentRating;
+}
+
+/** Nota sobre un cliente (bitacora: no se edita ni se borra). */
+export interface CustomerNote {
+  id: string;
+  text: string;
+  authorName: string;
+  createdAt: string;
+}
+
+/** Contacto de referencia del cliente. */
+export interface CustomerReference {
+  id: string;
+  fullName: string;
+  phone: string;
+  relationship: string;
+}
+
 /** Un hecho de la historia del cliente (lo nuevo primero). */
 export interface CustomerActivity {
   at: string;

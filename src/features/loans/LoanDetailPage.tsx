@@ -27,6 +27,7 @@ import { FREQUENCY_LABEL, formatDate, formatMoney, formatMoneyShort } from '../.
 import { DisbursementCard } from './DisbursementCard';
 import { InstallmentsSection } from './InstallmentsSection';
 import { LoanDecisionActions } from './LoanDecisionActions';
+import { CustomerBehaviorCard } from '../customers/CustomerBehavior';
 import { STATUS_COLOR, STATUS_LABEL } from './loanDraft';
 
 export function LoanDetailPage() {
@@ -68,6 +69,11 @@ export function LoanDetailPage() {
               {seesAll && ` por ${l.sellerName}`}
             </Text>
           </Stack>
+
+          {/* Antes de decidir, el admin ve como paga el cliente (abierto: es el dato clave). */}
+          {l.status === 'REQUESTED' && canApprove && (
+            <CustomerBehaviorCard customerId={l.customerId} defaultOpen />
+          )}
 
           {l.status === 'REQUESTED' && canApprove ? (
             <LoanDecisionActions loan={l} />

@@ -32,6 +32,8 @@ import { formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { todayIso } from './loanDraft';
 import { ReceiptModal } from './ReceiptModal';
+import { paymentDelay } from './collectionState';
+import { Foldable } from '../../shared/components/Foldable';
 
 type Action = { kind: 'collect' | 'revert'; installment: InstallmentResponse } | null;
 
@@ -175,10 +177,14 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
       {isSeller(user) && <CollectionAccountCard compact />}
 
       {loan.history && loan.history.length > 0 && (
-        <Card withBorder padding="md">
-          <Text fw={700} mb="sm">
-            Historial de cobros
-          </Text>
+        <Foldable
+          title="Historial de cobros"
+          aside={
+            <Badge variant="light" color="gray">
+              {loan.history.length}
+            </Badge>
+          }
+        >
           <Timeline bulletSize={22} lineWidth={2} active={loan.history.length}>
             {[...loan.history].reverse().map((e, index) => (
               <Timeline.Item
@@ -200,7 +206,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
               </Timeline.Item>
             ))}
           </Timeline>
-        </Card>
+        </Foldable>
       )}
 
       <Modal
@@ -283,6 +289,7 @@ function InstallmentRow({
   onReceipt?: () => void;
 }) {
   const collected = row.status === 'COLLECTED';
+  const delay = paymentDelay(row);
   return (
     <Group
       justify="space-between"
@@ -296,9 +303,16 @@ function InstallmentRow({
             Cuota {row.number}/{total}
           </Text>
           {collected ? (
-            <Badge size="xs" color="teal" variant="light">
-              Cobrada
-            </Badge>
+            // Puntualidad: si se cobro despues del vencimiento, cuantos dias tarde.
+            delay != null && delay > 0 ? (
+              <Badge size="xs" color="orange" variant="light">
+                Cobrada {delay} día{delay === 1 ? '' : 's'} tarde
+              </Badge>
+            ) : (
+              <Badge size="xs" color="teal" variant="light">
+                Cobrada a tiempo
+              </Badge>
+            )
           ) : row.overdue ? (
             <Badge size="xs" color="red" variant="light">
               Vencida

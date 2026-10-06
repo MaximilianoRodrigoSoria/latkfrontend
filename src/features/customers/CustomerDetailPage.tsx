@@ -31,6 +31,9 @@ import { formatDate, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { CustomerForm, fromCustomer } from './CustomerForm';
 import { CustomerActivityCard } from './CustomerActivityCard';
+import { CustomerBehaviorCard } from './CustomerBehavior';
+import { CustomerNotesCard } from './CustomerNotesCard';
+import { CustomerReferencesCard } from './CustomerReferencesCard';
 import { ageAt } from './validators';
 
 export function CustomerDetailPage() {
@@ -146,6 +149,10 @@ export function CustomerDetailPage() {
             </Stack>
           )}
 
+          <CustomerBehaviorCard customerId={c.id} />
+          <CustomerNotesCard customerId={c.id} canWrite={canEdit} />
+          <CustomerReferencesCard customerId={c.id} canWrite={canEdit} />
+
           <CustomerActivityCard customerId={c.id} />
 
           <Section title="Datos personales">
@@ -185,7 +192,7 @@ export function CustomerDetailPage() {
           </Section>
 
           {c.notes && (
-            <Section title="Notas">
+            <Section title="Observación del alta">
               <Text size="sm">{c.notes}</Text>
             </Section>
           )}

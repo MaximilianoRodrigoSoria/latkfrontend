@@ -1,4 +1,4 @@
-import type { LoanResponse } from '../../api/types';
+import type { InstallmentResponse, LoanResponse } from '../../api/types';
 import { isOpen, todayIso } from './loanDraft';
 
 /**
@@ -99,4 +99,15 @@ export function lastPaymentLabel(
   if (days <= 0) return 'Pagó hoy';
   if (days === 1) return 'Pagó ayer';
   return `Pagó hace ${days} días`;
+}
+
+/**
+ * Puntualidad de una cuota cobrada: dias entre el vencimiento y el dia del cobro (0 o menos: a
+ * tiempo). null si no esta cobrada.
+ */
+export function paymentDelay(
+  row: Pick<InstallmentResponse, 'status' | 'dueDate' | 'collectedAt'>,
+): number | null {
+  if (row.status !== 'COLLECTED' || !row.collectedAt) return null;
+  return daysBetween(row.dueDate, todayIso(new Date(row.collectedAt)));
 }

@@ -46,6 +46,53 @@ test.describe('vendedor', () => {
     await capture(page, info, '05-cliente-detalle');
   });
 
+  test('ficha del cliente: cómo paga, notas y referencias plegables', async ({ page }, info) => {
+    await page.goto('/customers');
+    await page.locator('a[href^="/customers/"]').first().click();
+    await expect(page).toHaveURL(/\/customers\/[\w-]+$/);
+
+    // Plegadas: se ve el titulo y el dato breve, el detalle al tocar.
+    const behavior = page.getByRole('button', { name: /Cómo paga/ });
+    await expect(behavior).toContainText(/Puntual|Regular|Riesgoso|Sin historial/);
+    await behavior.click();
+    await expect(page.getByText(/cuotas a tiempo|Todavía no venció/)).toBeVisible();
+
+    await page.getByRole('button', { name: /^Notas/ }).click();
+    const note = `Paga los viernes ${Date.now()}`;
+    await page.getByPlaceholder('Ej.: paga los viernes, cambió de domicilio').fill(note);
+    await page.getByRole('button', { name: 'Agregar nota' }).click();
+    await expect(page.getByText(note)).toBeVisible();
+
+    await page.getByRole('button', { name: /^Referencias/ }).click();
+    await page.getByRole('button', { name: 'Agregar referencia' }).click();
+    await page.getByLabel('Nombre', { exact: true }).fill('Ana Referencia');
+    await page.getByLabel('Vínculo').fill('Hermana');
+    await page.getByLabel('Teléfono').fill('11 5555-1234');
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+    await expect(page.getByText('Ana Referencia')).toBeVisible();
+    await capture(page, info, '05b-cliente-notas-referencias');
+
+    // Se deja como estaba.
+    await page.getByRole('button', { name: 'Quitar a Ana Referencia' }).click();
+    await expect(page.getByText('Ana Referencia')).toHaveCount(0);
+  });
+
+  test('cuotas con puntualidad e historial plegado', async ({ page }, info) => {
+    await page.goto('/loans?status=DISBURSED');
+    // Un prestamo con al menos una cuota cobrada.
+    await page
+      .locator('a[href^="/loans/"]:not([href="/loans/new"])')
+      .filter({ has: page.getByText(/^[1-9]\d*\/\d+ cobradas/) })
+      .first()
+      .click();
+    await expect(page.getByText(/^Cobrada (a tiempo|\d+ días? tarde)$/).first()).toBeVisible();
+    const history = page.getByRole('button', { name: /Historial de cobros/ });
+    await expect(history).toHaveAttribute('aria-expanded', 'false');
+    await history.click();
+    await expect(page.getByText(/^Cuota \d+ cobrada/).first()).toBeVisible();
+    await capture(page, info, '07c-cuotas-puntualidad');
+  });
+
   test('préstamos y detalle con cuotas', async ({ page }, info) => {
     await page.goto('/loans');
     await expect(page.getByRole('heading', { name: 'Préstamos' })).toBeVisible();

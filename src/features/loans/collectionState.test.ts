@@ -5,6 +5,7 @@ import {
   lastPayment,
   lastPaymentLabel,
   loanCollectionState,
+  paymentDelay,
   readyToRenew,
 } from './collectionState';
 
@@ -64,5 +65,17 @@ describe('último pago', () => {
     expect(lastPaymentLabel(last, TODAY)).toBe('Pagó hace 2 días');
     expect(lastPaymentLabel(null, TODAY)).toBeNull();
     expect(daysBetween('2026-09-30', TODAY)).toBe(6);
+  });
+});
+
+describe('puntualidad de una cuota', () => {
+  it('a tiempo, tarde o sin cobrar', () => {
+    const base = { dueDate: '2026-10-01', status: 'COLLECTED' as const };
+    expect(paymentDelay({ ...base, collectedAt: '2026-09-30T15:00:00Z' })).toBe(-1);
+    expect(paymentDelay({ ...base, collectedAt: '2026-10-01T15:00:00Z' })).toBe(0);
+    expect(paymentDelay({ ...base, collectedAt: '2026-10-04T15:00:00Z' })).toBe(3);
+    expect(
+      paymentDelay({ dueDate: '2026-10-01', status: 'PENDING', collectedAt: null }),
+    ).toBeNull();
   });
 });
