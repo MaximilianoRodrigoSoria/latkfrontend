@@ -1,3 +1,5 @@
+import { PullToRefresh } from '../../shared/components/PullToRefresh';
+import { ContentMotion } from '../../shared/components/MobileMotion';
 import {
   Button,
   Card,
@@ -170,6 +172,14 @@ export function CustomersPage() {
         </Chip.Group>
       )}
 
+      <PullToRefresh
+        onRefresh={async () => {
+          await Promise.all([
+            customers.refetch({ throwOnError: true }),
+            loans.refetch({ throwOnError: true }),
+          ]);
+        }}
+      />
       {customers.isLoading && <Skeleton h={80} />}
       {customers.data && visible.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
@@ -181,36 +191,38 @@ export function CustomersPage() {
         </Text>
       )}
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-        {visible.map((customer) => (
-          <Card
-            key={customer.id}
-            withBorder
-            padding="md"
-            component={Link}
-            to={`/customers/${customer.id}`}
-          >
-            <Group justify="space-between" wrap="nowrap">
-              <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                <ListThumb>
-                  <IconUser size={24} stroke={1.8} />
-                </ListThumb>
-                <Stack gap={2} style={{ minWidth: 0 }}>
-                  <Text fw={700}>{customer.fullName}</Text>
-                  <Text size="sm" c="dimmed">
-                    DNI {customer.dni} · {customer.city}
-                  </Text>
-                  <CustomerStatusLine
-                    phone={customer.phone}
-                    loans={loansByCustomer.get(customer.id) ?? []}
-                  />
-                </Stack>
+      <ContentMotion replayKey={filter}>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+          {visible.map((customer) => (
+            <Card
+              key={customer.id}
+              withBorder
+              padding="md"
+              component={Link}
+              to={`/customers/${customer.id}`}
+            >
+              <Group justify="space-between" wrap="nowrap">
+                <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                  <ListThumb>
+                    <IconUser size={24} stroke={1.8} />
+                  </ListThumb>
+                  <Stack gap={2} style={{ minWidth: 0 }}>
+                    <Text fw={700}>{customer.fullName}</Text>
+                    <Text size="sm" c="dimmed">
+                      DNI {customer.dni} · {customer.city}
+                    </Text>
+                    <CustomerStatusLine
+                      phone={customer.phone}
+                      loans={loansByCustomer.get(customer.id) ?? []}
+                    />
+                  </Stack>
+                </Group>
+                <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
               </Group>
-              <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
-            </Group>
-          </Card>
-        ))}
-      </SimpleGrid>
+            </Card>
+          ))}
+        </SimpleGrid>
+      </ContentMotion>
       <Drawer
         opened={opened}
         onClose={close}

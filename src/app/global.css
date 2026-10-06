@@ -46,10 +46,85 @@ body {
 }
 
 .latk-dock-link {
+  position: relative;
+  isolation: isolate;
   flex: 1;
   min-width: 0;
   min-height: 48px;
   border-radius: 16px;
+}
+
+.latk-dock-indicator {
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mantine-primary-color-filled) 12%, transparent);
+}
+
+.mantine-Button-root,
+.mantine-ActionIcon-root,
+.latk-dock-link,
+.latk-touch-card,
+a.mantine-Card-root {
+  transition:
+    scale 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+@media (hover: none) {
+  .mantine-Button-root:not(:disabled):not([data-loading]):active,
+  .mantine-ActionIcon-root:not(:disabled):not([data-loading]):active,
+  .latk-dock-link:active,
+  .latk-touch-card:active,
+  a.mantine-Card-root:active {
+    scale: 0.98;
+  }
+}
+
+.latk-refresh-handle {
+  display: none;
+}
+
+@media (pointer: coarse) and (max-width: 48em) {
+  .latk-refresh-handle {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-height: 44px;
+    touch-action: pan-x;
+  }
+}
+
+.latk-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mantine-Button-root,
+  .mantine-ActionIcon-root,
+  .latk-dock-link,
+  .latk-touch-card,
+  a.mantine-Card-root,
+  .mantine-Drawer-content,
+  .mantine-Modal-content,
+  .mantine-Overlay-root,
+  .mantine-Collapse-root,
+  .mantine-SegmentedControl-indicator {
+    transition: none !important;
+    animation: none !important;
+    scale: 1 !important;
+  }
+
+  .latk-fold-chevron {
+    transition: none !important;
+  }
 }
 
 .latk-dock-action {

@@ -1,3 +1,5 @@
+import { PullToRefresh } from '../../shared/components/PullToRefresh';
+import { ContentMotion } from '../../shared/components/MobileMotion';
 import {
   Button,
   Card,
@@ -77,6 +79,14 @@ export function SellersPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
       />
 
+      <PullToRefresh
+        onRefresh={async () => {
+          await Promise.all([
+            sellers.refetch({ throwOnError: true }),
+            quotas.refetch({ throwOnError: true }),
+          ]);
+        }}
+      />
       {sellers.isLoading && <Skeleton h={90} />}
       {sellers.data && visible.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
@@ -84,33 +94,41 @@ export function SellersPage() {
         </Text>
       )}
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-        {visible.map((s) => (
-          <Card key={s.userId} withBorder padding="md" component={Link} to={`/sellers/${s.userId}`}>
-            <Group justify="space-between" wrap="nowrap" align="flex-start">
-              <Stack gap={6} style={{ flex: 1 }}>
-                <Stack gap={0}>
-                  <Text fw={700}>{s.fullName}</Text>
-                  <Text size="xs" c="dimmed">
-                    @{s.username}
-                    {s.commissionRate != null &&
-                      ` · ${(s.commissionRate * 100).toLocaleString('es-AR')} %`}
-                  </Text>
+      <ContentMotion>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+          {visible.map((s) => (
+            <Card
+              key={s.userId}
+              withBorder
+              padding="md"
+              component={Link}
+              to={`/sellers/${s.userId}`}
+            >
+              <Group justify="space-between" wrap="nowrap" align="flex-start">
+                <Stack gap={6} style={{ flex: 1 }}>
+                  <Stack gap={0}>
+                    <Text fw={700}>{s.fullName}</Text>
+                    <Text size="xs" c="dimmed">
+                      @{s.username}
+                      {s.commissionRate != null &&
+                        ` · ${(s.commissionRate * 100).toLocaleString('es-AR')} %`}
+                    </Text>
+                  </Stack>
+                  {s.phone && (
+                    <Group gap={4}>
+                      <IconPhone size={14} />
+                      <Text size="sm">{s.phone}</Text>
+                    </Group>
+                  )}
+                  <Completeness value={s.completeness} missing={s.missingFields} compact />
+                  {quotaOf(s.userId) && <QuotaBar quota={quotaOf(s.userId)!} />}
                 </Stack>
-                {s.phone && (
-                  <Group gap={4}>
-                    <IconPhone size={14} />
-                    <Text size="sm">{s.phone}</Text>
-                  </Group>
-                )}
-                <Completeness value={s.completeness} missing={s.missingFields} compact />
-                {quotaOf(s.userId) && <QuotaBar quota={quotaOf(s.userId)!} />}
-              </Stack>
-              <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
-            </Group>
-          </Card>
-        ))}
-      </SimpleGrid>
+                <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />
+              </Group>
+            </Card>
+          ))}
+        </SimpleGrid>
+      </ContentMotion>
       <Drawer
         opened={opened}
         onClose={close}

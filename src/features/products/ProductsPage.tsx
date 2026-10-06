@@ -1,3 +1,4 @@
+import { ContentMotion } from '../../shared/components/MobileMotion';
 import {
   Anchor,
   Badge,
@@ -69,7 +70,9 @@ export function ProductsPage() {
           ]}
         />
       )}
-      {view === 'offers' ? <OffersView /> : <ManageView />}
+      <ContentMotion key={view}>
+        {view === 'offers' ? <OffersView /> : <ManageView />}
+      </ContentMotion>
     </Stack>
   );
 }

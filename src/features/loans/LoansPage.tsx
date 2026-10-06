@@ -1,3 +1,5 @@
+import { PullToRefresh } from '../../shared/components/PullToRefresh';
+import { ContentMotion } from '../../shared/components/MobileMotion';
 import {
   Badge,
   Button,
@@ -147,6 +149,11 @@ export function LoansPage() {
         </Text>
       )}
 
+      <PullToRefresh
+        onRefresh={async () => {
+          await loans.refetch({ throwOnError: true });
+        }}
+      />
       {loans.isLoading && <Skeleton h={90} />}
       {loans.isError && <Text c="red">{loans.error.message}</Text>}
       {loans.data && visible.length === 0 && (
@@ -161,11 +168,13 @@ export function LoansPage() {
         </Text>
       )}
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-        {visible.map((loan) => (
-          <LoanCard key={loan.id} loan={loan} showSeller={seesAll} />
-        ))}
-      </SimpleGrid>
+      <ContentMotion replayKey={status}>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+          {visible.map((loan) => (
+            <LoanCard key={loan.id} loan={loan} showSeller={seesAll} />
+          ))}
+        </SimpleGrid>
+      </ContentMotion>
     </Stack>
   );
 }
@@ -176,7 +185,13 @@ export function LoanCard({ loan, showSeller }: { loan: LoanResponse; showSeller?
   const state = loanCollectionState(loan);
   const lastPaid = lastPaymentLabel(loan.lastPaymentAt);
   return (
-    <Card withBorder padding="md" component={Link} to={`/loans/${loan.id}`}>
+    <Card
+      className="latk-touch-card"
+      withBorder
+      padding="md"
+      component={Link}
+      to={`/loans/${loan.id}`}
+    >
       <Group justify="space-between" wrap="nowrap" align="flex-start">
         <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
           <ListThumb color={loan.productTier ? TIER_COLOR[loan.productTier] : undefined}>

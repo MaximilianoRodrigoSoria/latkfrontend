@@ -1,3 +1,4 @@
+import { MotionConfig } from 'motion/react';
 import { DatesProvider } from '@mantine/dates';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import 'dayjs/locale/es';
@@ -31,16 +32,18 @@ useAuthStore.subscribe((state, previous) => {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <DynamicThemeProvider>
-        <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1 }}>
-          <ToastHost />
-          <DevToolsGuard>
-            <ScreenGuard>
-              <RouterProvider router={router} />
-            </ScreenGuard>
-          </DevToolsGuard>
-        </DatesProvider>
-      </DynamicThemeProvider>
+      <MotionConfig reducedMotion="user">
+        <DynamicThemeProvider>
+          <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1 }}>
+            <ToastHost />
+            <DevToolsGuard>
+              <ScreenGuard>
+                <RouterProvider router={router} />
+              </ScreenGuard>
+            </DevToolsGuard>
+          </DatesProvider>
+        </DynamicThemeProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

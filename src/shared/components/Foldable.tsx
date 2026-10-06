@@ -28,6 +28,7 @@ export function Foldable({
           <Group gap="xs" wrap="nowrap">
             {aside}
             <IconChevronDown
+              className="latk-fold-chevron"
               size={18}
               style={{
                 transform: opened ? 'rotate(180deg)' : undefined,

@@ -23,6 +23,8 @@ import {
   IconUserPlus,
   IconSwitchHorizontal,
 } from '@tabler/icons-react';
+import { motion } from 'motion/react';
+import { PageMotion } from '../shared/components/MobileMotion';
 import { Suspense, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { otherAccounts, useAuthStore } from '../auth/authStore';
@@ -201,7 +203,9 @@ export function AppLayout() {
             </Center>
           }
         >
-          <Outlet />
+          <PageMotion path={location.pathname}>
+            <Outlet />
+          </PageMotion>
         </Suspense>
       </AppShell.Main>
 
@@ -217,6 +221,13 @@ export function AppLayout() {
                 aria-current={active ? 'page' : undefined}
                 className="latk-dock-link"
               >
+                {active && (
+                  <motion.span
+                    className="latk-dock-indicator"
+                    layoutId="dock-indicator"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
                 <Stack gap={4} align="center" py={6} c={active ? 'brand' : 'dimmed'}>
                   <item.icon size={24} stroke={active ? 2.2 : 1.6} />
                   <Text size="10px" fw={active ? 700 : 500}>

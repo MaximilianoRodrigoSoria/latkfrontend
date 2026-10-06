@@ -47,6 +47,18 @@ src/
 └── shared/     formato es-AR, notificaciones, componentes comunes
 ```
 
+## Interacciones móviles
+
+- Motion anima la entrada de pantallas y el indicador de la barra inferior. Cambiar parámetros de
+  la URL no reinicia la animación ni remonta el formulario.
+- Los botones y las tarjetas navegables responden al toque con una escala sutil.
+- Clientes, préstamos y vendedores ofrecen **Actualizar**. En celulares también se puede
+  arrastrar la zona indicada y soltar después de 64 px; el gesto no intercepta el scroll del listado.
+- Los filtros de clientes y préstamos, las vistas de productos y el resultado del simulador tienen
+  transiciones cortas. Los paneles inferiores y las secciones plegables usan Mantine.
+- Se respeta la preferencia del dispositivo de reducir movimiento. Las actualizaciones reutilizan
+  las consultas existentes de TanStack Query.
+
 ## Design system editable
 
 - El tema vive en el backend (`GET/PUT /api/v1/settings/theme`). El GET es público, así el login

@@ -1,3 +1,4 @@
+import { ContentMotion } from '../../shared/components/MobileMotion';
 import {
   Button,
   Card,
@@ -90,7 +91,11 @@ export function SimulatorPage() {
           </Stack>
         </Paper>
       )}
-      {simulate.data && <SimulationResult result={simulate.data} />}
+      {simulate.data && (
+        <ContentMotion>
+          <SimulationResult result={simulate.data} />
+        </ContentMotion>
+      )}
     </Stack>
   );
 }
