@@ -36,6 +36,8 @@ import { ReceiptModal } from './ReceiptModal';
 import type { PartialPayment } from './receipt';
 import { paymentDelay } from './collectionState';
 import { Foldable } from '../../shared/components/Foldable';
+import { notify } from '../../shared/notify';
+import { isOfflineError, useOfflineCollections } from './offlineCollections';
 
 type Action = { kind: 'collect' | 'revert'; installment: InstallmentResponse } | null;
 
@@ -110,10 +112,30 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
     },
     onError: (error) => {
       modal.close();
+      // Sin señal: el cobro queda guardado en el celular y se manda solo al volver la conexion.
+      if (action?.kind === 'collect' && isOfflineError(error)) {
+        useOfflineCollections.getState().add({
+          loanId: loan.id,
+          customerName: loan.customerName,
+          number: action.installment.number,
+          amount: isPartial ? Number(amount) : undefined,
+        });
+        notify({
+          tone: 'warning',
+          title: 'Sin conexión',
+          message: `Cobro de la cuota ${action.installment.number} guardado: se envía cuando vuelva la señal.`,
+        });
+        return;
+      }
       notifyError(error);
       void queryClient.invalidateQueries({ queryKey: queryKeys.loan(loan.id) });
     },
   });
+  const offlinePending = useOfflineCollections((s) => s.pending);
+  const queued = offlinePending.filter((p) => p.loanId === loan.id).map((p) => p.number);
+  // Mora de la cuota que se esta cobrando (solo si se completa: un abono no la cobra).
+  const lateFeeNow =
+    action?.kind === 'collect' && !isPartial ? (action.installment.lateFee ?? 0) : 0;
 
   const isAdvance = (i: InstallmentResponse) => i.dueDate > today;
 
@@ -133,7 +155,13 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             aria-label="Avance de cobro"
           />
 
-          {canCollect && next && (
+          {queued.length > 0 && (
+            <Text size="sm" c="orange">
+              Cobro sin enviar (cuota {queued.join(', ')}): se registra cuando vuelva la señal.
+            </Text>
+          )}
+
+          {canCollect && next && !queued.includes(next.number) && (
             <Button
               size="md"
               color={isAdvance(next) ? 'blue' : 'teal'}
@@ -272,6 +300,12 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
                   onChange={(v) => setAmount(typeof v === 'number' ? v : '')}
                   data-autofocus
                 />
+                {lateFeeNow > 0 && (
+                  <Text size="sm" c="orange">
+                    Además, recargo por mora: {formatMoney(lateFeeNow)}. Total a cobrar:{' '}
+                    <b>{formatMoney(Number(amount) + lateFeeNow)}</b>.
+                  </Text>
+                )}
                 {isPartial && (
                   <Text size="sm" c="cyan">
                     Abono parcial: van a faltar {formatMoney(owed - Number(amount))} de esta cuota.
@@ -384,6 +418,11 @@ function InstallmentRow({
             </Badge>
           )}
         </Group>
+        {(row.lateFee ?? 0) > 0 && (
+          <Text size="xs" c="orange">
+            {collected ? 'Con' : '+'} mora {formatMoneyShort(row.lateFee ?? 0)}
+          </Text>
+        )}
         <Text size="xs" c="dimmed">
           {collected && row.collectedAt
             ? `Cobrada el ${formatDate(row.collectedAt)}${row.collectedByName ? ` · ${row.collectedByName}` : ''}`

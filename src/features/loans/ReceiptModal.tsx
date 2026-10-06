@@ -105,6 +105,7 @@ export function ReceiptTicket({ data }: { data: ReceiptData }) {
         )}
         {data.partialRemaining != null &&
           row('Resta de la cuota', formatMoney(data.partialRemaining))}
+        {data.lateFee != null && row('Recargo por mora', formatMoney(data.lateFee))}
         {row('Préstamo', `${data.product} · Nº ${data.loanRef}`)}
         {data.collectedAt && row('Fecha de cobro', formatDateTime(data.collectedAt))}
         {row('Cobró', data.collector)}

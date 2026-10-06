@@ -75,6 +75,56 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return (await response.json()) as T;
 }
 
+/** Descarga un archivo (por ejemplo el respaldo ZIP) con la sesion actual. */
+export async function download(path: string, fallbackName: string): Promise<void> {
+  const token = tokenProvider();
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new ApiError({
+      status: 0,
+      title: 'Sin conexion',
+      detail: 'No se pudo contactar al servidor',
+    });
+  }
+  if (!response.ok) throw new ApiError(await readProblem(response));
+  const name =
+    /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ??
+    fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Sube un archivo como multipart (campo "file"). */
+export async function upload<T>(path: string, file: File): Promise<T> {
+  const token = tokenProvider();
+  const form = new FormData();
+  form.append('file', file);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : {},
+      body: form,
+    });
+  } catch {
+    throw new ApiError({
+      status: 0,
+      title: 'Sin conexion',
+      detail: 'No se pudo contactar al servidor',
+    });
+  }
+  if (!response.ok) throw new ApiError(await readProblem(response));
+  return (await response.json()) as T;
+}
+
 async function readProblem(response: Response): Promise<ProblemDetail> {
   try {
     const body = (await response.json()) as Partial<ProblemDetail>;

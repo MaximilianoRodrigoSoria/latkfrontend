@@ -21,7 +21,7 @@ import { useAuthStore } from '../../auth/authStore';
 import { isSeller } from '../../auth/permissions';
 import { monthName } from '../quota/QuotaCard';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
+import { formatMoneyShort, INSTALLMENTS_LABEL } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { findOption, offerLabel } from '../products/tiers';
 import { EMPTY_DRAFT, isComplete, isOpen, type LoanDraft } from './loanDraft';
@@ -58,6 +58,8 @@ export function NewLoanPage() {
     queryFn: () => api.customers(''),
   });
   const loans = useQuery({ queryKey: queryKeys.loans, queryFn: api.loans });
+  const charges = useQuery({ queryKey: queryKeys.lendingCharges, queryFn: api.lendingCharges });
+  const paperwork = charges.data?.paperworkFee ?? 0;
   const offers = useQuery({ queryKey: queryKeys.offers, queryFn: api.offers });
 
   const busyCustomers = useMemo(
@@ -211,9 +213,15 @@ export function NewLoanPage() {
             <Text size="sm">
               Vas a solicitar <b>{formatMoneyShort(chosen.amount)}</b> ({offerLabel(offer)}) para{' '}
               <b>{customer?.fullName ?? 'el cliente'}</b> en {chosen.installments} cuotas{' '}
-              {PERIOD_LABEL[offer.frequency]}es de{' '}
+              {INSTALLMENTS_LABEL[offer.frequency]} de{' '}
               <b>{formatMoneyShort(chosen.installmentAmount)}</b>.
             </Text>
+            {paperwork > 0 && (
+              <Text size="sm">
+                Gastos de papelería: <b>{formatMoneyShort(paperwork)}</b>. Se descuentan de lo que
+                recibe el cliente ({formatMoneyShort(Math.max(chosen.amount - paperwork, 0))}).
+              </Text>
+            )}
             <Text size="sm" c="dimmed">
               Si el monto supera el límite de aprobación automática, el administrador la revisa
               antes de transferir el dinero al cliente.

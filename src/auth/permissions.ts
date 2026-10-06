@@ -28,6 +28,7 @@ export const Permission = {
   LOAN_READ_OWN: 'loan.read.own',
   LOAN_READ_ALL: 'loan.read.all',
   LENDING_SETTINGS: 'lending.settings',
+  DATA_BACKUP: 'data.backup',
 } as const;
 
 export function hasPermission(user: SessionUser | null, permission: string): boolean {

@@ -36,6 +36,8 @@ import { LoanDecisionActions } from './LoanDecisionActions';
 import { INTEREST_METHOD_LABEL } from '../settings/LendingSettingsPage';
 import { CustomerBehaviorCard } from '../customers/CustomerBehavior';
 import { STATUS_COLOR, STATUS_LABEL } from './loanDraft';
+import { LoanActionsMenu } from './LoanActionsMenu';
+import { LoanIncreasesCard } from './LoanIncreasesCard';
 
 export function LoanDetailPage() {
   const { id = '' } = useParams();
@@ -45,6 +47,13 @@ export function LoanDetailPage() {
   const canDisburse = hasPermission(user, Permission.DISBURSEMENT_REGISTER);
   const loan = useQuery({ queryKey: queryKeys.loan(id), queryFn: () => api.loan(id) });
   const l = loan.data;
+  // Aumentos: solo existen sobre prestamos ya transferidos.
+  const increases = useQuery({
+    queryKey: queryKeys.loanIncreases(id),
+    queryFn: () => api.loanIncreases(id),
+    enabled: l?.status === 'DISBURSED' || l?.status === 'COMPLETED',
+  });
+  const increaseList = increases.data ?? [];
 
   return (
     <Stack>
@@ -64,9 +73,12 @@ export function LoanDetailPage() {
               <Title order={2} size="h3">
                 {formatMoneyShort(l.principal)}
               </Title>
-              <Badge variant="light" size="lg" color={STATUS_COLOR[l.status]}>
-                {STATUS_LABEL[l.status]}
-              </Badge>
+              <Group gap={4} wrap="nowrap">
+                <Badge variant="light" size="lg" color={STATUS_COLOR[l.status]}>
+                  {STATUS_LABEL[l.status]}
+                </Badge>
+                <LoanActionsMenu loan={l} increases={increaseList} />
+              </Group>
             </Group>
             <Anchor component={Link} to={`/customers/${l.customerId}`} fw={600}>
               {l.customerName}
@@ -90,6 +102,8 @@ export function LoanDetailPage() {
             <DecisionStatus loan={l} />
           )}
 
+          <LoanIncreasesCard loan={l} increases={increaseList} />
+
           {l.schedule && l.schedule.length > 0 && <InstallmentsSection loan={l} />}
 
           <Card withBorder padding="md">
@@ -107,6 +121,12 @@ export function LoanDetailPage() {
                 value={`${l.installments} de ${formatMoneyShort(l.installmentAmount)}`}
               />
               <Row label="Total a devolver" value={formatMoneyShort(l.totalToRepay)} strong />
+              {(l.paperworkFee ?? 0) > 0 && (
+                <Row
+                  label="Papelería"
+                  value={`${formatMoneyShort(l.paperworkFee ?? 0)} · el cliente recibe ${formatMoneyShort(l.principal - (l.paperworkFee ?? 0))}`}
+                />
+              )}
               {/* Solo quien ve tasas (admin): con que metodo se calculo este prestamo. */}
               {l.interestMethod && l.ratePerPeriod != null && (
                 <Row

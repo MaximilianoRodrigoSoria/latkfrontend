@@ -23,6 +23,7 @@ import {
   IconUserPlus,
   IconSwitchHorizontal,
 } from '@tabler/icons-react';
+import { OfflineSync } from '../features/loans/OfflineSync';
 import { motion } from 'motion/react';
 import { PageMotion } from '../shared/components/MobileMotion';
 import { Suspense, useEffect } from 'react';
@@ -106,6 +107,7 @@ export function AppLayout() {
         <Group h={HEADER_HEIGHT} px="md" justify="space-between" wrap="nowrap">
           <BrandMark size={28} />
           <Group gap="xs" wrap="nowrap">
+            <OfflineSync />
             <NotificationBell />
             <ActionIcon
               variant="subtle"

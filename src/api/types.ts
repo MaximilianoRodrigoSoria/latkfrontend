@@ -16,8 +16,38 @@ export type InterestMethod = 'FRENCH' | 'FLAT';
 
 export interface LendingSettings {
   interestMethod: InterestMethod;
+  /** Papeleria: monto fijo que se descuenta de lo que se transfiere. */
+  paperworkFeeEnabled: boolean;
+  paperworkFee: number;
+  /** Mora: recargo diario sobre la cuota vencida (0.005 = 0,5 %). */
+  lateFeeEnabled: boolean;
+  lateFeeDailyRate: number;
   updatedAt?: string | null;
   updatedByName?: string | null;
+}
+
+/** Lo que el vendedor le cuenta al cliente antes de pedir (sin tasas). */
+export interface LendingCharges {
+  paperworkFee: number;
+  lateFee: boolean;
+}
+
+export interface LoanIncrease {
+  id: string;
+  extraInstallments: number;
+  installmentAmount: number;
+  extraPrincipal: number;
+  status: 'REQUESTED' | 'APPROVED' | 'REJECTED';
+  requestedByName: string;
+  requestedAt: string;
+  decidedByName?: string | null;
+  decidedAt?: string | null;
+  reason?: string | null;
+}
+
+export interface BackupImportResult {
+  inserted: number;
+  byTable: Record<string, number>;
 }
 export type ThemeRadius = 'XS' | 'SM' | 'MD' | 'LG' | 'XL';
 export type ColorSchemeSetting = 'LIGHT' | 'DARK' | 'AUTO';
@@ -227,6 +257,8 @@ export interface InstallmentResponse {
   collectedByName?: string | null;
   /** Abonado de una cuota pendiente (pagos parciales). */
   paidAmount?: number | null;
+  /** Mora: la acumulada si esta vencida (con la mora activa) o la cobrada. */
+  lateFee?: number | null;
   /** Pendiente y con telefono del cliente: link wa.me con el recordatorio ya escrito. */
   reminderUrl?: string | null;
 }
@@ -272,6 +304,8 @@ export interface LoanResponse {
   installments: number;
   installmentAmount: number;
   totalToRepay: number;
+  /** Papeleria descontada de lo que se transfiere. */
+  paperworkFee?: number | null;
   status: LoanStatus;
   notes?: string | null;
   requestedAt: string;

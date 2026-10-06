@@ -27,11 +27,12 @@ import { LoansSectionTabs } from '../loans/LoansSectionTabs';
 import { PageHeader } from '../../shared/components/PageHeader';
 import {
   FREQUENCY_LABEL,
+  INSTALLMENTS_LABEL,
+  PERIOD_LABEL,
   formatDate,
   formatMoney,
   formatMoneyShort,
   formatRate,
-  PERIOD_LABEL,
 } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
 import { NEW_PARAM, useOpenFromQuery } from '../../shared/useOpenFromQuery';
@@ -182,7 +183,7 @@ export function CategoryCard({
           {formatMoneyShort(amounts[0] ?? 0)}
         </Text>
         <Text size="sm">
-          De {installments[0]} a {installments.at(-1)} cuotas {period}es
+          De {installments[0]} a {installments.at(-1)} cuotas {INSTALLMENTS_LABEL[offer.frequency]}
         </Text>
         <Text size="sm" c="dimmed">
           Cuota {period} de {formatMoneyShort(Math.min(...cuotas))} a{' '}

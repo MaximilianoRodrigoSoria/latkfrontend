@@ -47,5 +47,17 @@ export const PERIOD_LABEL: Record<PaymentFrequency, string> = {
   MONTHLY: 'mensual',
 };
 
+/** Para "N cuotas ...": "8 cuotas semanales", "38 cuotas diarias", "6 cuotas cada 10 días". */
+export const INSTALLMENTS_LABEL: Record<PaymentFrequency, string> = {
+  DAILY: 'diarias',
+  WEEKLY: 'semanales',
+  EVERY_10_DAYS: 'cada 10 días',
+  EVERY_14_DAYS: 'catorcenales',
+  BIWEEKLY: 'quincenales',
+  EVERY_20_DAYS: 'cada 20 días',
+  EVERY_28_DAYS: 'cada 28 días',
+  MONTHLY: 'mensuales',
+};
+
 /** En el orden en que se ofrecen, de la mas corta a la mas larga. */
 export const FREQUENCIES = Object.keys(FREQUENCY_LABEL) as PaymentFrequency[];

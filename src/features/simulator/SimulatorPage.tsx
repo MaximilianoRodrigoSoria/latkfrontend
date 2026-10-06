@@ -23,7 +23,7 @@ import { isSeller } from '../../auth/permissions';
 import { EMPTY_CHOICE, LoanPicker, type LoanChoice } from '../loans/LoanPicker';
 import { LoansSectionTabs } from '../loans/LoansSectionTabs';
 import { PageHeader } from '../../shared/components/PageHeader';
-import { formatDate, formatMoney, formatMoneyShort, PERIOD_LABEL } from '../../shared/format';
+import { formatDate, formatMoney, formatMoneyShort, INSTALLMENTS_LABEL } from '../../shared/format';
 import { notifyError } from '../../shared/notify';
 import { ShareButton } from '../../shared/share/ShareButton';
 import { simulationMessage } from '../../shared/share/shareMessages';
@@ -121,7 +121,10 @@ function SimulationResult({ result }: { result: SimulationResponse }) {
       </Group>
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
         <Stat label="Cuota" value={formatMoney(result.installmentAmount)} highlight />
-        <Stat label="Cuotas" value={`${result.installments} ${PERIOD_LABEL[result.frequency]}es`} />
+        <Stat
+          label="Cuotas"
+          value={`${result.installments} ${INSTALLMENTS_LABEL[result.frequency]}`}
+        />
         <Stat label="Total a devolver" value={formatMoney(result.totalToRepay)} />
         {showBreakdown ? (
           <Stat label="Interes total" value={formatMoney(result.totalInterest)} />

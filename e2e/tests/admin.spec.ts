@@ -83,6 +83,70 @@ test.describe('administrador', () => {
     }
   });
 
+  test('cargos opcionales: papelería', async ({ page }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'configuracion global');
+    await page.goto('/settings/lending');
+    const paperwork = page.getByRole('switch', { name: /Cobrar papelería/ });
+    await expect(paperwork).not.toBeChecked();
+    await paperwork.click();
+    await page.getByLabel('Papelería', { exact: true }).fill('1500');
+    await page.getByRole('button', { name: 'Guardar cargos' }).click();
+    await page.reload();
+    await expect(page.getByRole('switch', { name: /Cobrar papelería/ })).toBeChecked();
+    await capture(page, info, '06c-admin-cargos');
+    // Se deja como estaba.
+    await page.getByRole('switch', { name: /Cobrar papelería/ }).click();
+    await page.getByRole('button', { name: 'Guardar cargos' }).click();
+    await page.reload();
+    await expect(page.getByRole('switch', { name: /Cobrar papelería/ })).not.toBeChecked();
+  });
+
+  test('aumento: el vendedor lo pide y el admin lo decide', async ({ page, browser }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'modifica un prestamo');
+    const sellerContext = await browser.newContext({ baseURL: info.project.use.baseURL });
+    const seller = await sellerContext.newPage();
+    await login(seller, 'seller');
+    await seller.goto('/loans?status=DISBURSED');
+    await seller.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();
+    const loanUrl = seller.url();
+    await seller.getByRole('button', { name: 'Más acciones' }).click();
+    await seller.getByRole('menuitem', { name: 'Pedir aumento' }).click();
+    await seller.getByLabel('¿Cuántas cuotas querés agregar?').fill('2');
+    await expect(seller.getByText(/El cliente recibe .* más/)).toBeVisible();
+    await seller.getByRole('button', { name: 'Pedir aumento' }).click();
+    await expect(seller.getByText('Aumento pendiente de aprobación')).toBeVisible();
+    await sellerContext.close();
+
+    // El admin lo ve en el prestamo y lo rechaza (asi los datos de prueba no cambian).
+    await page.goto(new URL(loanUrl).pathname);
+    await expect(page.getByText('Aumento pendiente de aprobación')).toBeVisible();
+    await capture(page, info, '06d-admin-aumento-pendiente');
+    await page.getByRole('button', { name: 'Rechazar' }).click();
+    await page.getByLabel('Motivo').fill('Prueba automática');
+    await page.getByRole('dialog').getByRole('button', { name: 'Rechazar' }).click();
+    await expect(page.getByText('Aumento pendiente de aprobación')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Aumentos/ }).click();
+    await expect(page.getByText('Rechazado').first()).toBeVisible();
+  });
+
+  test('saldar préstamo muestra el total a cobrar', async ({ page }) => {
+    await page.goto('/loans?status=DISBURSED');
+    await page.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();
+    await page.getByRole('button', { name: 'Más acciones' }).click();
+    await page.getByRole('menuitem', { name: 'Saldar préstamo' }).click();
+    await expect(page.getByText(/^Total a cobrar: \$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Volver' }).click();
+  });
+
+  test('respaldo de datos: descarga el ZIP', async ({ page }, info) => {
+    await page.goto('/settings/backup');
+    await expect(page.getByRole('heading', { name: 'Respaldo de datos' })).toBeVisible();
+    await capture(page, info, '06e-admin-respaldo');
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Descargar respaldo' }).click();
+    expect((await download).suggestedFilename()).toMatch(/\.zip$/);
+  });
+
   test('tema', async ({ page }, info) => {
     await page.goto('/settings/theme');
     await expect(page.getByRole('heading', { name: 'Design system' })).toBeVisible();

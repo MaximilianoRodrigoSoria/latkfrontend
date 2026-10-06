@@ -1,4 +1,4 @@
-import { request } from './http';
+import { download, request, upload } from './http';
 import type {
   CollectionAccount,
   CustomerActivity,
@@ -11,7 +11,10 @@ import type {
   EarningsResponse,
   LoanRequestBody,
   LoanResponse,
+  BackupImportResult,
+  LendingCharges,
   LendingSettings,
+  LoanIncrease,
   LoginRequest,
   PaymentBehavior,
   LoginResponse,
@@ -86,14 +89,46 @@ export const api = {
       method: 'POST',
       body: { reference },
     }),
-  /** Sin monto se cobra lo que falta; con menos, es un abono parcial. */
-  collectInstallment: (id: string, number: number, amount?: number) =>
+  /**
+   * Sin monto se cobra lo que falta; con menos, es un abono parcial. {@code offline}: referencia y
+   * hora real de un cobro hecho sin conexion (el servidor ignora un envio repetido).
+   */
+  collectInstallment: (
+    id: string,
+    number: number,
+    amount?: number,
+    offline?: { reference: string; collectedAt: string },
+  ) =>
     request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/collect`, {
       method: 'POST',
-      body: amount == null ? undefined : { amount },
+      body: amount == null && !offline ? undefined : { amount, ...offline },
     }),
+  settleLoan: (id: string) =>
+    request<LoanResponse>(`/api/v1/loans/${id}/settle`, { method: 'POST' }),
+  loanIncreases: (id: string) => request<LoanIncrease[]>(`/api/v1/loans/${id}/increases`),
+  previewIncrease: (id: string, extraInstallments: number) =>
+    request<{ extraPrincipal: number }>(
+      `/api/v1/loans/${id}/increases/preview?extraInstallments=${extraInstallments}`,
+    ),
+  requestIncrease: (id: string, extraInstallments: number) =>
+    request<LoanIncrease>(`/api/v1/loans/${id}/increases`, {
+      method: 'POST',
+      body: { extraInstallments },
+    }),
+  approveIncrease: (id: string, increaseId: string) =>
+    request<LoanIncrease>(`/api/v1/loans/${id}/increases/${increaseId}/approve`, {
+      method: 'POST',
+    }),
+  rejectIncrease: (id: string, increaseId: string, reason: string) =>
+    request<LoanIncrease>(`/api/v1/loans/${id}/increases/${increaseId}/reject`, {
+      method: 'POST',
+      body: { reason },
+    }),
+  lendingCharges: () => request<LendingCharges>('/api/v1/settings/lending/charges'),
+  exportBackup: () => download('/api/v1/admin/backup/export', 'latk-respaldo.zip'),
+  importBackup: (file: File) => upload<BackupImportResult>('/api/v1/admin/backup/import', file),
   lendingSettings: () => request<LendingSettings>('/api/v1/settings/lending'),
-  changeLendingSettings: (body: Pick<LendingSettings, 'interestMethod'>) =>
+  changeLendingSettings: (body: Omit<LendingSettings, 'updatedAt' | 'updatedByName'>) =>
     request<LendingSettings>('/api/v1/settings/lending', { method: 'PUT', body }),
   revertInstallment: (id: string, number: number, reason: string) =>
     request<LoanResponse>(`/api/v1/loans/${id}/installments/${number}/revert`, {
@@ -193,6 +228,8 @@ export const queryKeys = {
   customerActivity: (id: string) => ['customerActivity', id] as const,
   customerBehavior: (id: string) => ['customerBehavior', id] as const,
   lendingSettings: ['lendingSettings'] as const,
+  lendingCharges: ['lendingCharges'] as const,
+  loanIncreases: (id: string) => ['loanIncreases', id] as const,
   customerNotes: (id: string) => ['customerNotes', id] as const,
   customerReferences: (id: string) => ['customerReferences', id] as const,
   loans: ['loans'] as const,

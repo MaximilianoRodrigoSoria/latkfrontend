@@ -33,6 +33,9 @@ export function DisbursementCard({ loan }: { loan: LoanResponse }) {
     queryFn: () => api.customer(loan.customerId),
   });
   const account = customer.data?.bankAccount;
+  // Papeleria: se descuenta de lo que se transfiere.
+  const fee = loan.paperworkFee ?? 0;
+  const toTransfer = loan.principal - fee;
 
   const disburse = useMutation({
     mutationFn: () => api.disburseLoan(loan.id, reference.trim() || null),
@@ -53,7 +56,13 @@ export function DisbursementCard({ loan }: { loan: LoanResponse }) {
     <Card withBorder padding="md" style={{ borderColor: 'var(--mantine-color-blue-5)' }}>
       <Stack gap="sm">
         <Stack gap={2}>
-          <Text fw={700}>Falta transferir {formatMoneyShort(loan.principal)}</Text>
+          <Text fw={700}>Falta transferir {formatMoneyShort(toTransfer)}</Text>
+          {fee > 0 && (
+            <Text size="sm">
+              {formatMoneyShort(loan.principal)} − papelería {formatMoneyShort(fee)} ={' '}
+              <b>{formatMoneyShort(toTransfer)}</b>
+            </Text>
+          )}
           <Text size="sm" c="dimmed">
             Transferí a la cuenta de {loan.customerName} y registralo acá.
           </Text>
@@ -87,7 +96,7 @@ export function DisbursementCard({ loan }: { loan: LoanResponse }) {
       <Modal opened={confirming} onClose={modal.close} title="Registrar transferencia" centered>
         <Stack>
           <Text size="sm">
-            Confirmás que transferiste <b>{formatMoneyShort(loan.principal)}</b> a{' '}
+            Confirmás que transferiste <b>{formatMoneyShort(toTransfer)}</b> a{' '}
             <b>{loan.customerName}</b>?
           </Text>
           <Text size="sm" c="dimmed">

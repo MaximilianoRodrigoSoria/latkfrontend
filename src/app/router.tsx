@@ -55,6 +55,9 @@ const CollectionAccountPage = lazy(() =>
     default: m.CollectionAccountPage,
   })),
 );
+const BackupPage = lazy(() =>
+  import('../features/settings/BackupPage').then((m) => ({ default: m.BackupPage })),
+);
 const LendingSettingsPage = lazy(() =>
   import('../features/settings/LendingSettingsPage').then((m) => ({
     default: m.LendingSettingsPage,
@@ -182,6 +185,14 @@ export const router = createBrowserRouter([
         element: (
           <RequirePermission permission={Permission.LENDING_SETTINGS}>
             <LendingSettingsPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'settings/backup',
+        element: (
+          <RequirePermission permission={Permission.DATA_BACKUP}>
+            <BackupPage />
           </RequirePermission>
         ),
       },

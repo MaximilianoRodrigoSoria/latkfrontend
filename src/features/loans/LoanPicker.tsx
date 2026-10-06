@@ -11,7 +11,12 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import type { OfferOption, ProductOffer } from '../../api/types';
-import { formatMoneyShort, formatRate, PERIOD_LABEL } from '../../shared/format';
+import {
+  formatMoneyShort,
+  formatRate,
+  PERIOD_LABEL,
+  INSTALLMENTS_LABEL,
+} from '../../shared/format';
 import {
   findOption,
   offerAmounts,
@@ -146,7 +151,7 @@ export function LoanPicker({ offers, value, onChange }: LoanPickerProps) {
             <Card withBorder padding="md" radius="md">
               <Group justify="space-between" mb="xs">
                 <Text fw={700} size="sm">
-                  Cuotas {PERIOD_LABEL[offer.frequency]}es
+                  Cuotas {INSTALLMENTS_LABEL[offer.frequency]}
                 </Text>
                 <Text size="xs" c="dimmed">
                   de {installments[0]} a {installments.at(-1)}
@@ -246,7 +251,7 @@ function TierInfo({ offer, amounts }: { offer: ProductOffer; amounts: number[] }
           <Text fw={800}>{offerLabel(offer)}</Text>
           <Text size="sm">
             De {formatMoneyShort(amounts[0]!)} a <b>{formatMoneyShort(amounts.at(-1)!)}</b> · de{' '}
-            {installments[0]} a {installments.at(-1)} cuotas {PERIOD_LABEL[offer.frequency]}es
+            {installments[0]} a {installments.at(-1)} cuotas {INSTALLMENTS_LABEL[offer.frequency]}
           </Text>
           {offer.surcharge != null && (
             <Text size="xs" c="dimmed">

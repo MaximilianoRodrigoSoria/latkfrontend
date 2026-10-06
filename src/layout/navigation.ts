@@ -3,6 +3,7 @@ import {
   IconBuildingBank,
   IconCash,
   IconCoin,
+  IconDatabaseExport,
   IconHome,
   IconId,
   IconKey,
@@ -82,6 +83,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Configuración de créditos',
     icon: IconAdjustments,
     permissions: [Permission.LENDING_SETTINGS],
+    menuOnly: true,
+  },
+  {
+    to: '/settings/backup',
+    label: 'Respaldo de datos',
+    icon: IconDatabaseExport,
+    permissions: [Permission.DATA_BACKUP],
     menuOnly: true,
   },
   {

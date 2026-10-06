@@ -131,6 +131,8 @@ export interface ReceiptData {
   remaining: { amount: number; installments: number };
   /** Abono parcial: lo que todavia falta de la cuota. */
   partialRemaining?: number;
+  /** Recargo por mora cobrado con la cuota (ya incluido en {@code amount}). */
+  lateFee?: number;
 }
 
 /** Un abono parcial de la cuota (de su historial). */
@@ -152,6 +154,7 @@ export function receiptData(
   if (partial) {
     return {
       ...receiptData(loan, row),
+      lateFee: undefined,
       number: `${receiptNumber(loan.id, row.number)}-A${partial.index}`,
       collectedAt: partial.at,
       amount: partial.amount,
@@ -165,13 +168,16 @@ export function receiptData(
       partialRemaining: partial.remaining,
     };
   }
+  const lateFee = row.status === 'COLLECTED' && (row.lateFee ?? 0) > 0 ? row.lateFee! : undefined;
+  const total = Math.round((row.amount + (lateFee ?? 0)) * 100) / 100;
   return {
     number: receiptNumber(loan.id, row.number),
     collectedAt: row.collectedAt ?? null,
     customerName: loan.customerName,
     customerDni: loan.customerDni,
-    amount: row.amount,
-    amountInWords: amountInWords(row.amount),
+    amount: total,
+    amountInWords: amountInWords(total),
+    lateFee,
     installment: row.number,
     installments: loan.installments,
     product: loan.productName,
@@ -191,6 +197,7 @@ export function receiptMessage(r: ReceiptData): string {
     r.partialRemaining != null
       ? `como abono parcial de la cuota ${r.installment} de ${r.installments} del préstamo ${r.product} Nº ${r.loanRef}. Resta de la cuota: ${formatMoney(r.partialRemaining)}.`
       : `en concepto de la cuota ${r.installment} de ${r.installments} del préstamo ${r.product} Nº ${r.loanRef}.`,
+    r.lateFee ? `Incluye recargo por mora: ${formatMoney(r.lateFee)}.` : '',
     '',
     r.collectedAt ? `Fecha de cobro: ${formatDateTime(r.collectedAt)}` : '',
     `Cobró: ${r.collector}`,
