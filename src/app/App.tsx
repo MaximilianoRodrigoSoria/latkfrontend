@@ -4,6 +4,7 @@ import 'dayjs/locale/es';
 import { RouterProvider } from 'react-router';
 import { configureHttp } from '../api/http';
 import { getToken, useAuthStore } from '../auth/authStore';
+import { DevToolsGuard } from '../security/DevToolsGuard';
 import { ScreenGuard } from '../security/ScreenGuard';
 import { ToastHost } from '../shared/components/ToastHost';
 import { DynamicThemeProvider } from '../theme/DynamicThemeProvider';
@@ -33,9 +34,11 @@ export function App() {
       <DynamicThemeProvider>
         <DatesProvider settings={{ locale: 'es', firstDayOfWeek: 1 }}>
           <ToastHost />
-          <ScreenGuard>
-            <RouterProvider router={router} />
-          </ScreenGuard>
+          <DevToolsGuard>
+            <ScreenGuard>
+              <RouterProvider router={router} />
+            </ScreenGuard>
+          </DevToolsGuard>
         </DatesProvider>
       </DynamicThemeProvider>
     </QueryClientProvider>
