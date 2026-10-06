@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Chip,
+  Select,
   Drawer,
   Group,
   SimpleGrid,
@@ -16,6 +17,7 @@ import { useOpenFromQuery } from '../../shared/useOpenFromQuery';
 import { useDebouncedValue, useDisclosure, useMediaQuery } from '@mantine/hooks';
 import {
   IconChevronRight,
+  IconMapPin,
   IconPhone,
   IconSearch,
   IconUser,
@@ -124,7 +126,11 @@ export function CustomersPage() {
         return readyToRenew(own);
     }
   };
-  const visible = customers.data?.filter((c) => matches(c.id, filter)) ?? [];
+  // Zona: agrupa por la ciudad que ya tiene cada cliente. Solo aparece con mas de una.
+  const [zone, setZone] = useState<string | null>(null);
+  const zones = zoneOptions(customers.data ?? []);
+  const inZone = (city: string) => !zone || normalizeZone(city) === zone;
+  const visible = customers.data?.filter((c) => matches(c.id, filter) && inZone(c.city)) ?? [];
 
   const create = useMutation({
     mutationFn: api.createCustomer,
@@ -157,6 +163,21 @@ export function CustomersPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
       />
 
+      {zones.length > 1 && (
+        <Select
+          aria-label="Zona"
+          placeholder="Todas las zonas"
+          leftSection={<IconMapPin size={16} />}
+          data={zones}
+          value={zone}
+          onChange={setZone}
+          clearable
+          searchable
+          size="sm"
+          maw={280}
+        />
+      )}
+
       {customers.data && customers.data.length > 0 && (
         <Chip.Group value={filter} onChange={(v) => setFilter(v as CustomerFilter)}>
           <Group gap="xs">
@@ -165,7 +186,7 @@ export function CustomersPage() {
                 {FILTER_LABEL[f]}
                 {f !== 'ALL' &&
                   loans.data &&
-                  ` (${customers.data.filter((c) => matches(c.id, f)).length})`}
+                  ` (${customers.data.filter((c) => matches(c.id, f) && inZone(c.city)).length})`}
               </Chip>
             ))}
           </Group>
@@ -183,7 +204,7 @@ export function CustomersPage() {
       {customers.isLoading && <Skeleton h={80} />}
       {customers.data && visible.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
-          {filter !== 'ALL'
+          {filter !== 'ALL' || zone
             ? 'No hay clientes en este grupo.'
             : debounced
               ? 'No hay clientes que coincidan.'
@@ -240,4 +261,27 @@ export function CustomersPage() {
       </Drawer>
     </Stack>
   );
+}
+
+/** Misma zona aunque se haya escrito distinto ("san justo" y "San Justo "). */
+export function normalizeZone(city: string): string {
+  return city
+    .trim()
+    .toLocaleLowerCase('es-AR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Zonas de la cartera con su cantidad de clientes, de la mas poblada a la menos. */
+export function zoneOptions(list: { city: string }[]): { value: string; label: string }[] {
+  const zones = new Map<string, { label: string; count: number }>();
+  for (const c of list) {
+    if (!c.city?.trim()) continue;
+    const key = normalizeZone(c.city);
+    const z = zones.get(key);
+    zones.set(key, { label: z?.label ?? c.city.trim(), count: (z?.count ?? 0) + 1 });
+  }
+  return [...zones.entries()]
+    .sort((a, b) => b[1].count - a[1].count || a[1].label.localeCompare(b[1].label, 'es'))
+    .map(([value, z]) => ({ value, label: `${z.label} (${z.count})` }));
 }

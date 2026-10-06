@@ -535,6 +535,14 @@ export interface CustomerNote {
   createdAt: string;
 }
 
+/** "Recordarme" agendado sobre un cliente (personal de quien lo agenda). */
+export interface CustomerReminder {
+  id: string;
+  remindOn: string;
+  note: string;
+  createdAt: string;
+}
+
 /** Contacto de referencia del cliente. */
 export interface CustomerReference {
   id: string;

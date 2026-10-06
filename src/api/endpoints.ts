@@ -3,6 +3,7 @@ import type {
   CollectionAccount,
   CustomerActivity,
   CustomerNote,
+  CustomerReminder,
   CustomerReference,
   CustomerRequest,
   CustomerResponse,
@@ -191,6 +192,17 @@ export const api = {
       method: 'POST',
       body: { text },
     }),
+  customerReminders: (customerId: string) =>
+    request<CustomerReminder[]>(`/api/v1/customers/${customerId}/reminders`),
+  scheduleCustomerReminder: (customerId: string, remindOn: string, note: string | null) =>
+    request<CustomerReminder>(`/api/v1/customers/${customerId}/reminders`, {
+      method: 'POST',
+      body: { remindOn, note },
+    }),
+  cancelCustomerReminder: (customerId: string, reminderId: string) =>
+    request<void>(`/api/v1/customers/${customerId}/reminders/${reminderId}`, {
+      method: 'DELETE',
+    }),
   customerReferences: (customerId: string) =>
     request<CustomerReference[]>(`/api/v1/customers/${customerId}/references`),
   addCustomerReference: (customerId: string, body: Omit<CustomerReference, 'id'>) =>
@@ -232,6 +244,7 @@ export const queryKeys = {
   loanIncreases: (id: string) => ['loanIncreases', id] as const,
   customerNotes: (id: string) => ['customerNotes', id] as const,
   customerReferences: (id: string) => ['customerReferences', id] as const,
+  customerReminders: (id: string) => ['customerReminders', id] as const,
   loans: ['loans'] as const,
   sellers: ['sellers'] as const,
   sellerCategories: (id: string) => ['sellerCategories', id] as const,

@@ -77,6 +77,45 @@ test.describe('vendedor', () => {
     await expect(page.getByText('Ana Referencia')).toHaveCount(0);
   });
 
+  test('recordarme: agenda un aviso desde la ficha del cliente', async ({ page }, info) => {
+    await page.goto('/customers');
+    await page.locator('a[href^="/customers/"]').first().click();
+    await page.getByRole('button', { name: /^Recordatorios/ }).click();
+    await page.getByLabel('Recordarme el').click();
+    // Un dia habilitado del calendario (de hoy en adelante).
+    await page
+      .locator('.mantine-DateInput-day:not([data-disabled]):not([data-outside])')
+      .last()
+      .click();
+    const note = `Pasar a cobrar ${Date.now()}`;
+    await page.getByLabel('Para qué (opcional)').fill(note);
+    await page.getByRole('button', { name: 'Recordarme' }).click();
+    await expect(page.getByText(note)).toBeVisible();
+    await capture(page, info, '05c-cliente-recordatorio');
+    // Se deja como estaba.
+    await page
+      .getByRole('button', { name: /^Quitar recordatorio/ })
+      .first()
+      .click();
+    await expect(page.getByText(note)).toHaveCount(0);
+  });
+
+  test('clientes por zona y letra grande', async ({ page }) => {
+    await page.goto('/customers');
+    const zone = page.getByRole('textbox', { name: 'Zona' });
+    if (await zone.isVisible()) {
+      const before = await page.locator('a[href^="/customers/"]').count();
+      await zone.click();
+      await page.getByRole('option').last().click();
+      await expect.poll(() => page.locator('a[href^="/customers/"]').count()).toBeLessThan(before);
+    }
+    await page.getByRole('button', { name: 'Menu de usuario' }).click();
+    await page.getByRole('menuitem', { name: 'Letra grande' }).click();
+    await expect(page.locator('html')).toHaveAttribute('style', /font-size: 112.5%/);
+    await page.getByRole('menuitem', { name: 'Letra grande' }).click();
+    await expect(page.locator('html')).not.toHaveAttribute('style', /font-size/);
+  });
+
   test('abono parcial de una cuota con su recibo', async ({ page }, info) => {
     await page.goto('/loans?status=DISBURSED');
     await page.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();

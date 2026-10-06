@@ -7,8 +7,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { DEVTOOLS_ALLOWED, silenceConsole } from './security/devtools';
+import { initFontSize } from './shared/fontSize';
 
 if (!DEVTOOLS_ALLOWED) silenceConsole();
+initFontSize();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

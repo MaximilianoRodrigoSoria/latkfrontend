@@ -15,7 +15,9 @@ import {
   useMantineColorScheme,
 } from '@mantine/core';
 import {
+  IconCheck,
   IconDeviceMobileDown,
+  IconTextSize,
   IconLogout,
   IconMoon,
   IconSun,
@@ -40,6 +42,7 @@ import { NotificationBell } from '../features/notifications/NotificationBell';
 import { BrandMark } from '../shared/components/BrandMark';
 import { useInstallApp } from '../shared/install/InstallApp';
 import { setNotifyNavigator } from '../shared/notify';
+import { useFontSize } from '../shared/fontSize';
 import { NAV_ITEMS } from './navigation';
 
 const HEADER_HEIGHT = 56;
@@ -73,6 +76,8 @@ export function AppLayout() {
   }, [navigate]);
 
   const installApp = useInstallApp();
+  const fontSize = useFontSize((s) => s.size);
+  const toggleFontSize = useFontSize((s) => s.toggle);
   const barItems = items.filter((item) => !item.menuOnly);
   // El "+" de la barra inferior depende de la pantalla: en Vendedores, Clientes y Productos da de
   // alta en esa pantalla (sin un boton flotante aparte); en el resto, pide un prestamo.
@@ -144,6 +149,14 @@ export function AppLayout() {
                     {item.label}
                   </Menu.Item>
                 ))}
+                <Menu.Item
+                  leftSection={<IconTextSize size={16} />}
+                  rightSection={fontSize === 'large' ? <IconCheck size={16} /> : undefined}
+                  closeMenuOnClick={false}
+                  onClick={toggleFontSize}
+                >
+                  Letra grande
+                </Menu.Item>
                 {installApp.available && (
                   <Menu.Item
                     leftSection={<IconDeviceMobileDown size={16} />}

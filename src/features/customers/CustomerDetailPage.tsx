@@ -34,6 +34,7 @@ import { CustomerActivityCard } from './CustomerActivityCard';
 import { CustomerBehaviorCard } from './CustomerBehavior';
 import { CustomerNotesCard } from './CustomerNotesCard';
 import { CustomerReferencesCard } from './CustomerReferencesCard';
+import { CustomerRemindersCard } from './CustomerRemindersCard';
 import { ageAt } from './validators';
 
 export function CustomerDetailPage() {
@@ -150,6 +151,7 @@ export function CustomerDetailPage() {
           )}
 
           <CustomerBehaviorCard customerId={c.id} />
+          <CustomerRemindersCard customerId={c.id} />
           <CustomerNotesCard customerId={c.id} canWrite={canEdit} />
           <CustomerReferencesCard customerId={c.id} canWrite={canEdit} />
 
