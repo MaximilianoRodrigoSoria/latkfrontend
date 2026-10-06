@@ -1,0 +1,18 @@
+{
+  "name": "latk-flow-documentation",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/site.mjs start",
+    "build": "node scripts/site.mjs build",
+    "serve": "node scripts/site.mjs serve"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

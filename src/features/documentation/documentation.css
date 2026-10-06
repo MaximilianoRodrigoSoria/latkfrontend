@@ -1,0 +1,19 @@
+.latk-flow-guide {
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.latk-flow-guide h2,
+.latk-flow-guide h3 {
+  margin-block: 1.5rem 0.75rem;
+  scroll-margin-top: 100px;
+}
+.latk-flow-guide h2:first-child {
+  margin-top: 0;
+}
+.latk-flow-guide li + li {
+  margin-top: 0.5rem;
+}
+.latk-flow-guide ol,
+.latk-flow-guide ul {
+  padding-inline-start: 1.5rem;
+}

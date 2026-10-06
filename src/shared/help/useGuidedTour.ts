@@ -24,7 +24,13 @@ export function tourTips(path: string, user: SessionUser | null): Tip[] {
   ];
   const add = (title: string, description: string, selector?: string) =>
     tips.push({ title, description, selector });
-  if (path === '/') {
+  if (path === '/documentation') {
+    add(
+      'Documentación de flujos',
+      'Esta guía corresponde al rol de tu cuenta. Usá el índice para consultar un flujo y Guía de esta pantalla para conocer los controles.',
+      '[data-tour="page"]',
+    );
+  } else if (path === '/') {
     add(
       'Inicio',
       isSeller(user)

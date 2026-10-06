@@ -1,0 +1,3 @@
+# Solo para el Worker local. Copiar a .dev.vars y usar el secreto del backend.
+# Nunca usar VITE_LATK_JWT_SECRET ni subir el secreto a Git.
+LATK_JWT_SECRET=

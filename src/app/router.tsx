@@ -67,6 +67,12 @@ const ThemeSettingsPage = lazy(() =>
   import('../features/settings/ThemeSettingsPage').then((m) => ({ default: m.ThemeSettingsPage })),
 );
 
+const DocumentationPage = lazy(() =>
+  import('../features/documentation/DocumentationPage').then((m) => ({
+    default: m.DocumentationPage,
+  })),
+);
+
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   {
@@ -77,6 +83,7 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
+      { path: 'documentation', element: <DocumentationPage /> },
       { index: true, element: <DashboardPage /> },
       {
         path: 'simulator',

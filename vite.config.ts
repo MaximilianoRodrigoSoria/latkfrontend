@@ -25,13 +25,18 @@ export default defineConfig({
         icons: [
           { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
         // La API nunca se cachea en el service worker: los datos de prestamos los maneja
         // TanStack Query y no deben quedar en un cache persistente del navegador.
-        navigateFallbackDenylist: [/^\/latk-api\//],
+        navigateFallbackDenylist: [/^\/latk-api\//, /^\/documentation-api\//],
       },
     }),
   ],
@@ -45,6 +50,10 @@ export default defineConfig({
     // que el backend no rechace (403) si Vite corre en otro puerto (5174 cuando el 5173 esta
     // ocupado) o se abre desde el celular con --host.
     proxy: {
+      '/documentation-api': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
       '/latk-api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

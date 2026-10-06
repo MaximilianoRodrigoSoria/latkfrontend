@@ -1,5 +1,6 @@
 import {
   IconAdjustments,
+  IconBook,
   IconBuildingBank,
   IconCash,
   IconCoin,
@@ -31,6 +32,7 @@ export interface NavItem {
 // Barra corta (4 items): Inicio muestra las estadisticas y Prestamos agrupa la lista, el simulador
 // y los productos en pestanas.
 export const NAV_ITEMS: NavItem[] = [
+  { to: '/documentation', label: 'Documentación de flujos', icon: IconBook, menuOnly: true },
   { to: '/', label: 'Inicio', icon: IconHome },
   {
     to: '/customers',

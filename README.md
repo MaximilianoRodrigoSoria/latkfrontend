@@ -70,6 +70,12 @@ identifican con atributos `data-tour`; los estilos usan las variables del tema M
 `src/shared/help/tour.css`. El recorrido se cierra al cambiar de pantalla o cuenta y respeta la
 preferencia de reducir movimiento.
 
+## Documentación de flujos
+
+El menú de la cuenta permite consultar una guía básica por rol. Los contenidos se entregan desde
+un Worker de Cloudflare que verifica la sesión; no quedan incluidos en los archivos públicos de
+la app. El mismo Markdown genera sitios Docusaurus separados. Ver [configuración y comandos](documentation/README.md).
+
 ## Design system editable
 
 - El tema vive en el backend (`GET/PUT /api/v1/settings/theme`). El GET es público, así el login
