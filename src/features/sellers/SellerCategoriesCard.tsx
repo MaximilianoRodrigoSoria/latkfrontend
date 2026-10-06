@@ -4,6 +4,7 @@ import {
   Card,
   Checkbox,
   Group,
+  Modal,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -37,6 +38,7 @@ export function SellerCategoriesCard({ sellerId }: { sellerId: string }) {
   });
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmReset, setConfirmReset] = useState(false);
   // Al llegar la asignacion del servidor se cargan sus valores (una vez por respuesta).
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const serverKey = categories.data
@@ -104,7 +106,7 @@ export function SellerCategoriesCard({ sellerId }: { sellerId: string }) {
 
       <Group justify="flex-end" mt="md">
         {restricted && (
-          <Button variant="subtle" onClick={() => reset.mutate()} loading={reset.isPending}>
+          <Button variant="subtle" onClick={() => setConfirmReset(true)} loading={reset.isPending}>
             Volver a las por defecto
           </Button>
         )}
@@ -117,6 +119,29 @@ export function SellerCategoriesCard({ sellerId }: { sellerId: string }) {
           Guardar categorías
         </Button>
       </Group>
+      <Modal
+        opened={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        title="Volver a las categorías por defecto"
+        centered
+      >
+        <Text size="sm">
+          Se quita la asignación de este vendedor y pasa a ofrecer solo las categorías habilitadas
+          por defecto.
+        </Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={() => setConfirmReset(false)}>
+            Cancelar
+          </Button>
+          <Button
+            color="red"
+            loading={reset.isPending}
+            onClick={() => reset.mutate(undefined, { onSettled: () => setConfirmReset(false) })}
+          >
+            Confirmar
+          </Button>
+        </Group>
+      </Modal>
       {selected.size === 0 && categories.data && (
         <Text size="xs" c="red" ta="right" mt={4}>
           Elegí al menos una categoría.

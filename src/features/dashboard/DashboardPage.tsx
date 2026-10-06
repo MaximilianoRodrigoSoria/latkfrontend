@@ -21,6 +21,7 @@ import { QuotaCard } from '../quota/QuotaCard';
 import { PortfolioStatsPanel, usePortfolioStats } from '../stats/StatsPage';
 import { ThisMonthCard } from './ThisMonthCard';
 import { formatMoneyShort } from '../../shared/format';
+import { loanCollectionState } from '../loans/collectionState';
 import { useAchievementNotifications } from '../notifications/useAchievementNotifications';
 
 /**
@@ -46,8 +47,10 @@ export function DashboardPage() {
   const loans = useQuery({
     queryKey: queryKeys.loans,
     queryFn: api.loans,
-    enabled: canApprove,
   });
+  const states = loans.data?.map((l) => loanCollectionState(l)) ?? [];
+  const dueToday = states.filter((s) => s?.kind === 'TODAY').length;
+  const late = states.filter((s) => s?.kind === 'OVERDUE').length;
   const pending = loans.data?.filter((l) => l.status === 'REQUESTED').length ?? 0;
   const toTransfer = loans.data?.filter((l) => l.status === 'APPROVED').length ?? 0;
 
@@ -80,15 +83,22 @@ export function DashboardPage() {
         </Group>
       </Group>
 
-      {stats.data && stats.data.overdue.amount > 0 && (
-        <Alert color="red" title="Cobranza pendiente">
+      {(dueToday > 0 || late > 0) && (
+        <Alert color={late > 0 ? 'red' : 'blue'} title="Cobranza de hoy">
           <Stack gap="xs">
             <Text size="sm">
-              {stats.data.overdue.installments} cuotas vencidas ·{' '}
-              {formatMoneyShort(stats.data.overdue.amount)}
+              {[
+                dueToday > 0 && `${dueToday} para cobrar hoy`,
+                late > 0 && `${late} atrasado${late === 1 ? '' : 's'}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              {stats.data &&
+                stats.data.overdue.amount > 0 &&
+                ` (${stats.data.overdue.installments} ${stats.data.overdue.installments === 1 ? 'cuota vencida' : 'cuotas vencidas'} · ${formatMoneyShort(stats.data.overdue.amount)})`}
             </Text>
-            <Anchor component={Link} to="/loans?status=OVERDUE" size="sm">
-              Ver préstamos con cuotas vencidas
+            <Anchor component={Link} to="/loans?status=TODAY" size="sm">
+              Ver a quién cobrar
             </Anchor>
           </Stack>
         </Alert>

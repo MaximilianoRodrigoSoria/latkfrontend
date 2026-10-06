@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Chip,
   Drawer,
   Group,
   SimpleGrid,
@@ -20,14 +21,64 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, queryKeys } from '../../api/endpoints';
+import type { LoanResponse } from '../../api/types';
 import { useAuthStore } from '../../auth/authStore';
 import { hasPermission, Permission } from '../../auth/permissions';
 import { ListThumb } from '../../shared/components/ListThumb';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { notifyError, notifySuccess } from '../../shared/notify';
+import { CollectionChip } from '../loans/CollectionChip';
+import {
+  customerCollectionState,
+  isDueToday,
+  lastPayment,
+  lastPaymentLabel,
+  readyToRenew,
+} from '../loans/collectionState';
 import { CustomerForm } from './CustomerForm';
+
+type CustomerFilter = 'ALL' | 'TODAY' | 'OVERDUE' | 'RENEW';
+const FILTER_LABEL: Record<CustomerFilter, string> = {
+  ALL: 'Todos',
+  TODAY: 'Cobrar hoy',
+  OVERDUE: 'Atrasados',
+  RENEW: 'Para renovar',
+};
+const FILTER_COLOR: Record<CustomerFilter, string | undefined> = {
+  ALL: undefined,
+  TODAY: 'blue',
+  OVERDUE: 'red',
+  RENEW: 'teal',
+};
+
+/**
+ * Linea de estado del cliente: un solo chip (lo mas urgente de sus prestamos) y cuando pago por
+ * ultima vez. Sin prestamos, el telefono.
+ */
+function CustomerStatusLine({ phone, loans }: { phone: string; loans: LoanResponse[] }) {
+  const state = customerCollectionState(loans);
+  if (!state) {
+    return (
+      <Group gap={4}>
+        <IconPhone size={14} />
+        <Text size="sm">{phone}</Text>
+      </Group>
+    );
+  }
+  const last = lastPaymentLabel(lastPayment(loans));
+  return (
+    <Group gap="xs" wrap="nowrap">
+      <CollectionChip state={state} done="Para renovar" />
+      {last && (
+        <Text size="xs" c="dimmed" truncate>
+          {last}
+        </Text>
+      )}
+    </Group>
+  );
+}
 
 export function CustomersPage() {
   const user = useAuthStore((s) => s.user);
@@ -39,12 +90,39 @@ export function CustomersPage() {
   useOpenFromQuery(open, canCreate);
   const mobile = useMediaQuery('(max-width: 48em)');
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const queryClient = useQueryClient();
 
   const customers = useQuery({
     queryKey: queryKeys.customers(debounced),
     queryFn: () => api.customers(debounced),
   });
+
+  // Los prestamos (ya cacheados en la app) dan el estado de cobro de cada cliente.
+  const loans = useQuery({ queryKey: queryKeys.loans, queryFn: api.loans });
+  const loansByCustomer = new Map<string, LoanResponse[]>();
+  for (const loan of loans.data ?? []) {
+    loansByCustomer.set(loan.customerId, [...(loansByCustomer.get(loan.customerId) ?? []), loan]);
+  }
+  const [filter, setFilter] = useState<CustomerFilter>(() => {
+    const requested = params.get('filtro') as CustomerFilter | null;
+    return requested && requested in FILTER_LABEL ? requested : 'ALL';
+  });
+  const matches = (customerId: string, f: CustomerFilter) => {
+    const own = loansByCustomer.get(customerId) ?? [];
+    const state = customerCollectionState(own);
+    switch (f) {
+      case 'ALL':
+        return true;
+      case 'TODAY':
+        return isDueToday(state);
+      case 'OVERDUE':
+        return state?.kind === 'OVERDUE';
+      case 'RENEW':
+        return readyToRenew(own);
+    }
+  };
+  const visible = customers.data?.filter((c) => matches(c.id, filter)) ?? [];
 
   const create = useMutation({
     mutationFn: api.createCustomer,
@@ -77,15 +155,34 @@ export function CustomersPage() {
         onChange={(e) => setSearch(e.currentTarget.value)}
       />
 
+      {customers.data && customers.data.length > 0 && (
+        <Chip.Group value={filter} onChange={(v) => setFilter(v as CustomerFilter)}>
+          <Group gap="xs">
+            {(Object.keys(FILTER_LABEL) as CustomerFilter[]).map((f) => (
+              <Chip key={f} value={f} color={FILTER_COLOR[f]}>
+                {FILTER_LABEL[f]}
+                {f !== 'ALL' &&
+                  loans.data &&
+                  ` (${customers.data.filter((c) => matches(c.id, f)).length})`}
+              </Chip>
+            ))}
+          </Group>
+        </Chip.Group>
+      )}
+
       {customers.isLoading && <Skeleton h={80} />}
-      {customers.data?.length === 0 && (
+      {customers.data && visible.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
-          {debounced ? 'No hay clientes que coincidan.' : 'Todavia no tenes clientes.'}
+          {filter !== 'ALL'
+            ? 'No hay clientes en este grupo.'
+            : debounced
+              ? 'No hay clientes que coincidan.'
+              : 'Todavia no tenes clientes.'}
         </Text>
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-        {customers.data?.map((customer) => (
+        {visible.map((customer) => (
           <Card
             key={customer.id}
             withBorder
@@ -103,10 +200,10 @@ export function CustomersPage() {
                   <Text size="sm" c="dimmed">
                     DNI {customer.dni} · {customer.city}
                   </Text>
-                  <Group gap={4}>
-                    <IconPhone size={14} />
-                    <Text size="sm">{customer.phone}</Text>
-                  </Group>
+                  <CustomerStatusLine
+                    phone={customer.phone}
+                    loans={loansByCustomer.get(customer.id) ?? []}
+                  />
                 </Stack>
               </Group>
               <IconChevronRight size={20} color="var(--mantine-color-dimmed)" />

@@ -23,10 +23,12 @@ import { ListThumb } from '../../shared/components/ListThumb';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { FREQUENCY_LABEL, formatDate, formatMoneyShort } from '../../shared/format';
 import { TIER_COLOR, TierIcon } from '../products/tiers';
+import { CollectionChip } from './CollectionChip';
+import { isDueToday, lastPaymentLabel, loanCollectionState } from './collectionState';
 import { LoansSectionTabs } from './LoansSectionTabs';
 import { STATUS_COLOR, STATUS_LABEL, todayIso } from './loanDraft';
 
-type StatusFilter = 'ALL' | 'OVERDUE' | LoanStatus;
+type StatusFilter = 'ALL' | 'TODAY' | 'OVERDUE' | LoanStatus;
 const FILTER_LABEL: Record<LoanStatus, string> = {
   REQUESTED: 'Por aprobar',
   APPROVED: 'Por transferir',
@@ -36,6 +38,21 @@ const FILTER_LABEL: Record<LoanStatus, string> = {
 };
 const isOverdue = (loan: LoanResponse) =>
   loan.status === 'DISBURSED' && !!loan.nextDueDate && loan.nextDueDate < todayIso();
+/** Para cobrar hoy: vence hoy o esta atrasado. */
+const isToday = (loan: LoanResponse) => isDueToday(loanCollectionState(loan));
+const matches = (loan: LoanResponse, status: StatusFilter) =>
+  status === 'ALL'
+    ? true
+    : status === 'TODAY'
+      ? isToday(loan)
+      : status === 'OVERDUE'
+        ? isOverdue(loan)
+        : loan.status === status;
+/** En "Cobrar hoy", primero el que mas dias de atraso tiene. */
+const daysLate = (loan: LoanResponse) => {
+  const state = loanCollectionState(loan);
+  return state?.kind === 'OVERDUE' ? state.days : 0;
+};
 
 export function LoansPage() {
   const user = useAuthStore((s) => s.user);
@@ -47,7 +64,11 @@ export function LoansPage() {
   const requested = params.get('status') as StatusFilter | null;
   // Quien aprueba entra directo a lo que espera su decision.
   const [status, setStatus] = useState<StatusFilter>(
-    requested && (requested === 'ALL' || requested === 'OVERDUE' || requested in STATUS_LABEL)
+    requested &&
+      (requested === 'ALL' ||
+        requested === 'TODAY' ||
+        requested === 'OVERDUE' ||
+        requested in STATUS_LABEL)
       ? requested
       : canApprove
         ? 'REQUESTED'
@@ -62,13 +83,15 @@ export function LoansPage() {
       .replace(/[\u0300-\u036f]/g, '')
       .toLocaleLowerCase('es-AR');
   const visible =
-    loans.data?.filter(
-      (l) =>
-        (status === 'ALL' || (status === 'OVERDUE' ? isOverdue(l) : l.status === status)) &&
-        normalize(
-          `${l.customerName} ${l.customerDni ?? ''} ${seesAll ? l.sellerName : ''}`,
-        ).includes(normalize(search.trim())),
-    ) ?? [];
+    loans.data
+      ?.filter(
+        (l) =>
+          matches(l, status) &&
+          normalize(
+            `${l.customerName} ${l.customerDni ?? ''} ${seesAll ? l.sellerName : ''}`,
+          ).includes(normalize(search.trim())),
+      )
+      .sort((a, b) => (status === 'TODAY' ? daysLate(b) - daysLate(a) : 0)) ?? [];
   const countOf = (s: LoanStatus) => loans.data?.filter((l) => l.status === s).length ?? 0;
 
   return (
@@ -98,15 +121,24 @@ export function LoansPage() {
       <Chip.Group value={status} onChange={(v) => setStatus(v as StatusFilter)}>
         <Group gap="xs">
           <Chip value="ALL">Todos{loans.data && ` (${loans.data.length})`}</Chip>
-          <Chip value="OVERDUE" color="red">
-            Vencidos{loans.data && ` (${loans.data.filter(isOverdue).length})`}
+          <Chip value="TODAY" color="blue">
+            Cobrar hoy{loans.data && ` (${loans.data.filter(isToday).length})`}
           </Chip>
-          {(Object.keys(STATUS_LABEL) as LoanStatus[]).map((s) => (
-            <Chip key={s} value={s} color={STATUS_COLOR[s]}>
-              {FILTER_LABEL[s]}
-              {loans.data && ` (${countOf(s)})`}
+          {/* "Cobrar hoy" ya incluye lo atrasado: "Vencidos" solo aparece si se entro con ese filtro. */}
+          {status === 'OVERDUE' && (
+            <Chip value="OVERDUE" color="red">
+              Vencidos{loans.data && ` (${loans.data.filter(isOverdue).length})`}
             </Chip>
-          ))}
+          )}
+          {/* Sin estados vacios: menos chips, la lista queda limpia. */}
+          {(Object.keys(STATUS_LABEL) as LoanStatus[])
+            .filter((s) => s === status || countOf(s) > 0)
+            .map((s) => (
+              <Chip key={s} value={s} color={STATUS_COLOR[s]}>
+                {FILTER_LABEL[s]}
+                {loans.data && ` (${countOf(s)})`}
+              </Chip>
+            ))}
         </Group>
       </Chip.Group>
       {loans.data && (
@@ -123,7 +155,9 @@ export function LoansPage() {
             ? 'No hay préstamos que coincidan con la búsqueda.'
             : status === 'ALL'
               ? 'Todavía no hay préstamos.'
-              : 'No hay préstamos en este estado.'}
+              : status === 'TODAY'
+                ? 'No hay nada para cobrar hoy.'
+                : 'No hay préstamos en este estado.'}
         </Text>
       )}
 
@@ -137,6 +171,10 @@ export function LoansPage() {
 }
 
 export function LoanCard({ loan, showSeller }: { loan: LoanResponse; showSeller?: boolean }) {
+  // En cobranza, el chip dice lo urgente (atrasado, hoy, vence en N dias); si no, el estado.
+  const collecting = loan.status === 'DISBURSED';
+  const state = loanCollectionState(loan);
+  const lastPaid = lastPaymentLabel(loan.lastPaymentAt);
   return (
     <Card withBorder padding="md" component={Link} to={`/loans/${loan.id}`}>
       <Group justify="space-between" wrap="nowrap" align="flex-start">
@@ -156,26 +194,23 @@ export function LoanCard({ loan, showSeller }: { loan: LoanResponse; showSeller?
               </Text>
             </Group>
             <Group gap="xs">
-              <Badge variant="light" color={STATUS_COLOR[loan.status]}>
-                {STATUS_LABEL[loan.status]}
-              </Badge>
+              {collecting && state ? (
+                <CollectionChip state={state} />
+              ) : (
+                <Badge variant="light" color={STATUS_COLOR[loan.status]}>
+                  {STATUS_LABEL[loan.status]}
+                </Badge>
+              )}
               <Text size="xs" c="dimmed">
                 {formatDate(loan.requestedAt)}
                 {showSeller && ` · ${loan.sellerName}`}
               </Text>
             </Group>
-            {loan.status === 'DISBURSED' && loan.installmentsCollected != null && (
-              <Group gap="xs">
-                <Text size="xs">
-                  {loan.installmentsCollected}/{loan.installments} cobradas
-                  {loan.nextDueDate && ` · próxima ${formatDate(loan.nextDueDate)}`}
-                </Text>
-                {loan.nextDueDate && loan.nextDueDate < todayIso() && (
-                  <Badge size="xs" color="red" variant="filled">
-                    Vencida
-                  </Badge>
-                )}
-              </Group>
+            {collecting && loan.installmentsCollected != null && (
+              <Text size="xs" c="dimmed">
+                {loan.installmentsCollected}/{loan.installments} cobradas
+                {lastPaid && ` · ${lastPaid}`}
+              </Text>
             )}
           </Stack>
         </Group>

@@ -264,6 +264,8 @@ export interface LoanResponse {
   /** Avance de cobro; solo con cuotas generadas. */
   installmentsCollected?: number | null;
   nextDueDate?: string | null;
+  /** Ultimo cobro registrado (ISO); ausente si todavia no se cobro ninguna cuota. */
+  lastPaymentAt?: string | null;
   /** Solo en el detalle: plan estimado (el definitivo se fija al desembolsar). */
   estimatedSchedule?: InstallmentView[];
   /** Solo en el detalle, despues del desembolso: cuotas reales. */

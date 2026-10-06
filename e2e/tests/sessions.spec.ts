@@ -76,6 +76,7 @@ test.describe('varias cuentas en el mismo navegador', () => {
     // Se deja como estaba: vuelve a las categorias por defecto.
     await adminTab.reload();
     await adminTab.getByRole('button', { name: 'Volver a las por defecto' }).click();
+    await adminTab.getByRole('button', { name: 'Confirmar' }).click();
     await expect(adminTab.getByText('Por defecto', { exact: true })).toBeVisible();
   });
 });

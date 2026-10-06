@@ -58,6 +58,32 @@ test.describe('vendedor', () => {
     await capture(page, info, '07-prestamo-detalle');
   });
 
+  test('cobranza del día: chip de estado, cobrar hoy y para renovar', async ({ page }, info) => {
+    // Inicio avisa la cobranza del dia y lleva a la lista filtrada.
+    await expect(page.getByText('Cobranza de hoy')).toBeVisible();
+    await page.getByRole('link', { name: 'Ver a quién cobrar' }).click();
+    await expect(page).toHaveURL(/status=TODAY/);
+    await expect(page.getByText(/^Cobrar hoy \(\d+\)$/)).toBeVisible();
+    // Cada tarjeta tiene un solo chip de cobro: atrasado o para hoy.
+    const cards = page.locator('a[href^="/loans/"]:not([href="/loans/new"])');
+    await expect(cards.first()).toBeVisible();
+    await expect(cards.first().getByText(/^(Atrasado \d+ días?|Cobrar hoy)$/)).toHaveCount(1);
+    await capture(page, info, '06b-cobrar-hoy');
+
+    await page.goto('/customers');
+    for (const label of ['Cobrar hoy', 'Atrasados', 'Para renovar']) {
+      await expect(page.getByText(new RegExp(`^${label} \\(\\d+\\)$`))).toBeVisible();
+    }
+    await page.getByText(/^Atrasados \(\d+\)$/).click();
+    await expect(
+      page
+        .locator('a[href^="/customers/"]')
+        .first()
+        .getByText(/^Atrasado \d+ días?$/),
+    ).toBeVisible();
+    await capture(page, info, '04b-clientes-atrasados');
+  });
+
   test('simulador por categoría, sin tasa ni interés', async ({ page }, info) => {
     await page.goto('/simulator');
     await expect(page.getByRole('heading', { name: 'Simulador' })).toBeVisible();
