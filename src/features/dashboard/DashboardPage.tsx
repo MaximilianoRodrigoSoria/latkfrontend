@@ -56,7 +56,7 @@ export function DashboardPage() {
 
   return (
     <Stack>
-      <Group justify="space-between" align="center" gap="md">
+      <Group data-tour="page" justify="space-between" align="center" gap="md">
         <Stack gap={4}>
           <Title order={2} size="h3">
             Hola, {user?.fullName}

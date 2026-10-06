@@ -59,6 +59,17 @@ src/
 - Se respeta la preferencia del dispositivo de reducir movimiento. Las actualizaciones reutilizan
   las consultas existentes de TanStack Query.
 
+## Guías de uso
+
+El menú de la cuenta incluye **Guía de esta pantalla**. Driver.js muestra un recorrido en español
+para la pantalla actual, adaptado a los permisos y a los controles visibles en celular o escritorio.
+Se puede cerrar y repetir en cualquier momento; no aparece automáticamente ni registra operaciones.
+
+Los textos y la selección de pasos viven en `src/shared/help/useGuidedTour.ts`. Los controles se
+identifican con atributos `data-tour`; los estilos usan las variables del tema Mantine en
+`src/shared/help/tour.css`. El recorrido se cierra al cambiar de pantalla o cuenta y respeta la
+preferencia de reducir movimiento.
+
 ## Design system editable
 
 - El tema vive en el backend (`GET/PUT /api/v1/settings/theme`). El GET es público, así el login

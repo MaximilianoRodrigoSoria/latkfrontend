@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import {
   IconCheck,
+  IconHelp,
   IconDeviceMobileDown,
   IconTextSize,
   IconLogout,
@@ -25,6 +26,7 @@ import {
   IconUserPlus,
   IconSwitchHorizontal,
 } from '@tabler/icons-react';
+import { useGuidedTour } from '../shared/help/useGuidedTour';
 import { OfflineSync } from '../features/loans/OfflineSync';
 import { motion } from 'motion/react';
 import { PageMotion } from '../shared/components/MobileMotion';
@@ -61,6 +63,7 @@ export function AppLayout() {
   const others = otherAccounts({ accounts, user });
   const navigate = useNavigate();
   const location = useLocation();
+  const startTour = useGuidedTour(location.pathname, user);
   const { setColorScheme } = useMantineColorScheme();
   const scheme = useComputedColorScheme('light');
 
@@ -124,7 +127,7 @@ export function AppLayout() {
             </ActionIcon>
             <Menu position="bottom-end" width={240}>
               <Menu.Target>
-                <UnstyledButton aria-label="Menu de usuario">
+                <UnstyledButton aria-label="Menu de usuario" data-tour="account">
                   <Avatar color="brand" radius="xl" size={34}>
                     {(user?.fullName ?? '?').slice(0, 1).toUpperCase()}
                   </Avatar>
@@ -140,6 +143,9 @@ export function AppLayout() {
                   </Badge>
                 </Stack>
                 <Menu.Divider />
+                <Menu.Item leftSection={<IconHelp size={16} />} onClick={startTour}>
+                  Guía de esta pantalla
+                </Menu.Item>
                 {menuItems.map((item) => (
                   <Menu.Item
                     key={item.to}
@@ -197,7 +203,7 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="sm">
+      <AppShell.Navbar p="sm" data-tour="navigation">
         {items.map((item) => (
           <MantineNavLink
             key={item.to}
@@ -225,7 +231,7 @@ export function AppLayout() {
       </AppShell.Main>
 
       <AppShell.Footer hiddenFrom="sm" className="latk-bottom-nav">
-        <nav className="latk-mobile-dock" aria-label="Navegación principal">
+        <nav className="latk-mobile-dock" aria-label="Navegación principal" data-tour="navigation">
           {barItems.flatMap((item, index) => {
             const active = isActive(item.to);
             const link = (
@@ -256,6 +262,7 @@ export function AppLayout() {
                   link,
                   <ActionIcon
                     key="quick-action"
+                    data-tour="quick-action"
                     component={NavLink}
                     to={dockAction.to}
                     aria-label={dockAction.label}

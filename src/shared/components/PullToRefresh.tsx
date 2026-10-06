@@ -28,7 +28,7 @@ export function PullToRefresh({ onRefresh }: { onRefresh: () => Promise<unknown>
     setDistance(0);
   };
   return (
-    <Group justify="space-between" gap="xs" wrap="nowrap">
+    <Group data-tour="refresh" justify="space-between" gap="xs" wrap="nowrap">
       <div
         className="latk-refresh-handle"
         onPointerDown={(event) => {

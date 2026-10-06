@@ -9,7 +9,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <Group justify="space-between" align="flex-start" wrap="nowrap" mb="md">
+    <Group data-tour="page" justify="space-between" align="flex-start" wrap="nowrap" mb="md">
       <Stack gap={2}>
         <Title order={2} size="h3">
           {title}

@@ -26,6 +26,7 @@ export function LoansSectionTabs() {
 
   return (
     <SegmentedControl
+      data-tour="loan-tabs"
       fullWidth
       radius="xl"
       data={tabs}
