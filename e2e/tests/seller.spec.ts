@@ -116,6 +116,25 @@ test.describe('vendedor', () => {
     await expect(page.locator('html')).not.toHaveAttribute('style', /font-size/);
   });
 
+  test('cobro sin conexión con recibo provisorio', async ({ page, context }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'cobra una cuota');
+    await page.goto('/loans?status=DISBURSED');
+    await page.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();
+    await expect(page.getByRole('button', { name: /^(Cobrar|Adelantar) cuota \d+/ })).toBeVisible();
+    await context.setOffline(true);
+    await page.getByRole('button', { name: /^(Cobrar|Adelantar) cuota \d+/ }).click();
+    await page.getByRole('button', { name: 'Cobrada' }).click();
+    const receipt = page.getByRole('dialog', { name: 'Recibo de pago' });
+    await expect(receipt.getByText('Recibo provisorio')).toBeVisible();
+    await expect(receipt.getByText(/PENDIENTE DE CONFIRMAR/)).toBeVisible();
+    await capture(page, info, '07e-recibo-provisorio');
+    await page.keyboard.press('Escape');
+    await expect(page.getByText(/^Cobro sin enviar/)).toBeVisible();
+    // Vuelve la señal: se envia solo.
+    await context.setOffline(false);
+    await expect(page.getByText(/^Cobro sin enviar/)).toHaveCount(0, { timeout: 20_000 });
+  });
+
   test('abono parcial de una cuota con su recibo', async ({ page }, info) => {
     await page.goto('/loans?status=DISBURSED');
     await page.locator('a[href^="/loans/"]:not([href="/loans/new"])').first().click();

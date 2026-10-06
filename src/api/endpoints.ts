@@ -120,6 +120,18 @@ export const api = {
     request<LoanIncrease>(`/api/v1/loans/${id}/increases/${increaseId}/approve`, {
       method: 'POST',
     }),
+  disburseIncrease: (id: string, increaseId: string, reference: string | null) =>
+    request<LoanIncrease>(`/api/v1/loans/${id}/increases/${increaseId}/disburse`, {
+      method: 'POST',
+      body: { reference },
+    }),
+  fixedInstallments: (productId: string) =>
+    request<{ per10k: Record<string, number> }>(`/api/v1/products/${productId}/fixed-installments`),
+  setFixedInstallments: (productId: string, per10k: Record<string, number>) =>
+    request<{ per10k: Record<string, number> }>(
+      `/api/v1/products/${productId}/fixed-installments`,
+      { method: 'PUT', body: { per10k } },
+    ),
   rejectIncrease: (id: string, increaseId: string, reason: string) =>
     request<LoanIncrease>(`/api/v1/loans/${id}/increases/${increaseId}/reject`, {
       method: 'POST',

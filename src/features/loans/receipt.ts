@@ -1,5 +1,6 @@
 import type { InstallmentResponse, LoanResponse } from '../../api/types';
 import { formatDateTime, formatMoney } from '../../shared/format';
+import type { PendingCollection } from './offlineCollections';
 
 /** Numero de recibo estable: primeros 8 del prestamo + cuota ("R-3A1F09C2-04"). */
 export function receiptNumber(loanId: string, installment: number): string {
@@ -133,6 +134,8 @@ export interface ReceiptData {
   partialRemaining?: number;
   /** Recargo por mora cobrado con la cuota (ya incluido en {@code amount}). */
   lateFee?: number;
+  /** Cobro sin conexion todavia no enviado: pendiente de confirmar. */
+  provisional?: boolean;
 }
 
 /** Un abono parcial de la cuota (de su historial). */
@@ -187,10 +190,51 @@ export function receiptData(
   };
 }
 
+/**
+ * Recibo de un cobro hecho sin conexion, antes de enviarlo: mismos datos, numero provisorio y la
+ * aclaracion "pendiente de confirmar". El definitivo sale cuando el servidor lo registra.
+ */
+export function provisionalReceiptData(
+  loan: LoanResponse,
+  row: InstallmentResponse,
+  pending: PendingCollection,
+  collector: string,
+): ReceiptData {
+  const owed = Math.round((row.amount - (row.paidAmount ?? 0)) * 100) / 100;
+  const amount = pending.amount ?? owed;
+  const partial = amount < owed;
+  const lateFee = !partial && (row.lateFee ?? 0) > 0 ? row.lateFee! : undefined;
+  const total = Math.round((amount + (lateFee ?? 0)) * 100) / 100;
+  const after = remainingAfter(loan, row.number);
+  const left = Math.round((owed - amount) * 100) / 100;
+  return {
+    number: `PROV-${pending.reference.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    collectedAt: pending.collectedAt,
+    customerName: loan.customerName,
+    customerDni: loan.customerDni,
+    amount: total,
+    amountInWords: amountInWords(total),
+    installment: row.number,
+    installments: loan.installments,
+    product: loan.productName,
+    loanRef: loan.id.slice(0, 8).toUpperCase(),
+    collector,
+    remaining: partial
+      ? { amount: after.amount + left, installments: after.installments + 1 }
+      : after,
+    partialRemaining: partial ? left : undefined,
+    lateFee,
+    provisional: true,
+  };
+}
+
 /** Texto para mandar por WhatsApp (u otra app) como comprobante. */
 export function receiptMessage(r: ReceiptData): string {
   const lines = [
-    `*L.A TK · Recibo de pago ${r.number}*`,
+    r.provisional
+      ? `*L.A TK · Recibo provisorio ${r.number}*`
+      : `*L.A TK · Recibo de pago ${r.number}*`,
+    r.provisional ? 'Pendiente de confirmar: se registra cuando vuelva la señal.' : '',
     '',
     `Recibimos de ${r.customerName}${r.customerDni ? ` (DNI ${r.customerDni})` : ''} la suma de *${formatMoney(r.amount)}*`,
     `(${r.amountInWords})`,

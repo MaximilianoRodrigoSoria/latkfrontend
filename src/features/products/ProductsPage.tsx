@@ -1,4 +1,5 @@
 import { ContentMotion } from '../../shared/components/MobileMotion';
+import { FixedInstallmentsModal } from './FixedInstallmentsModal';
 import {
   Anchor,
   Badge,
@@ -15,7 +16,14 @@ import {
   Text,
 } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
-import { IconCalculator, IconEye, IconEyeOff, IconPlus, IconTrash } from '@tabler/icons-react';
+import {
+  IconCalculator,
+  IconEye,
+  IconEyeOff,
+  IconPlus,
+  IconReceipt2,
+  IconTrash,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -368,6 +376,10 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: ProductCardProps) {
+  const [fixingInstallment, setFixingInstallment] = useState(false);
+  const fixed = Object.entries(product.fixedInstallments ?? {}).sort(
+    ([a], [b]) => Number(a) - Number(b),
+  );
   const amounts = product.allowedAmounts;
   const period = PERIOD_LABEL[product.frequency];
   const rates = Object.entries(product.ratesByInstallments ?? {}).sort(
@@ -393,7 +405,9 @@ function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: Pr
       <Stack gap={4}>
         <Text size="sm">
           {FREQUENCY_LABEL[product.frequency]}
-          {product.ratePerPeriod != null &&
+          {fixed.length > 0 && ' · cuota fija'}
+          {fixed.length === 0 &&
+            product.ratePerPeriod != null &&
             (product.tier
               ? ` · recargo +${formatRate(product.ratePerPeriod)}`
               : ` · ${formatRate(product.ratePerPeriod)} ${period}`)}
@@ -407,7 +421,12 @@ function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: Pr
           Cuotas: {product.allowedInstallments[0]} a {product.allowedInstallments.at(-1)} · Gracia{' '}
           {product.graceDays} días
         </Text>
-        {product.tier && rates.length > 0 && (
+        {fixed.length > 0 && (
+          <Text size="xs" c="dimmed">
+            Cuota cada $10.000: {fixed.map(([n, v]) => `${n}: ${formatMoneyShort(v)}`).join(' · ')}
+          </Text>
+        )}
+        {fixed.length === 0 && product.tier && rates.length > 0 && (
           <Text size="xs" c="dimmed">
             Tasa {period} por cuotas: {rates.map(([n, r]) => `${n}: ${formatRate(r)}`).join(' · ')}
           </Text>
@@ -439,6 +458,14 @@ function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: Pr
       <Group justify="flex-end" mt="xs">
         <Button
           variant="subtle"
+          size="xs"
+          leftSection={<IconReceipt2 size={14} />}
+          onClick={() => setFixingInstallment(true)}
+        >
+          {fixed.length > 0 ? 'Editar cuota fija' : 'Fijar cuota'}
+        </Button>
+        <Button
+          variant="subtle"
           color="red"
           size="xs"
           leftSection={<IconTrash size={14} />}
@@ -447,6 +474,13 @@ function ProductCard({ product, toggling, onToggle, onVisibility, onDelete }: Pr
           Dar de baja
         </Button>
       </Group>
+      {fixingInstallment && (
+        <FixedInstallmentsModal
+          product={product}
+          opened={fixingInstallment}
+          onClose={() => setFixingInstallment(false)}
+        />
+      )}
     </Card>
   );
 }

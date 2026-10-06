@@ -37,7 +37,11 @@ import type { PartialPayment } from './receipt';
 import { paymentDelay } from './collectionState';
 import { Foldable } from '../../shared/components/Foldable';
 import { notify } from '../../shared/notify';
-import { isOfflineError, useOfflineCollections } from './offlineCollections';
+import {
+  isOfflineError,
+  useOfflineCollections,
+  type PendingCollection,
+} from './offlineCollections';
 
 type Action = { kind: 'collect' | 'revert'; installment: InstallmentResponse } | null;
 
@@ -59,6 +63,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
   const [receiptFor, setReceiptFor] = useState<{
     number: number;
     partial?: PartialPayment;
+    pending?: PendingCollection;
   } | null>(null);
   // Monto a cobrar: por defecto lo que falta de la cuota; menos es un abono parcial.
   const [amount, setAmount] = useState<number | ''>('');
@@ -79,6 +84,8 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
   const isPartial = action?.kind === 'collect' && amount !== '' && amount > 0 && amount < owed;
 
   const mutation = useMutation({
+    // Sin señal tiene que fallar enseguida (y guardarse en el celular), no quedar en pausa.
+    networkMode: 'always',
     mutationFn: () => {
       if (!action) throw new Error('Sin accion');
       return action.kind === 'collect'
@@ -114,7 +121,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
       modal.close();
       // Sin señal: el cobro queda guardado en el celular y se manda solo al volver la conexion.
       if (action?.kind === 'collect' && isOfflineError(error)) {
-        useOfflineCollections.getState().add({
+        const entry = useOfflineCollections.getState().add({
           loanId: loan.id,
           customerName: loan.customerName,
           number: action.installment.number,
@@ -125,6 +132,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
           title: 'Sin conexión',
           message: `Cobro de la cuota ${action.installment.number} guardado: se envía cuando vuelva la señal.`,
         });
+        setReceiptFor({ number: entry.number, pending: entry });
         return;
       }
       notifyError(error);
@@ -132,7 +140,8 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
     },
   });
   const offlinePending = useOfflineCollections((s) => s.pending);
-  const queued = offlinePending.filter((p) => p.loanId === loan.id).map((p) => p.number);
+  const queuedEntries = offlinePending.filter((p) => p.loanId === loan.id);
+  const queued = queuedEntries.map((p) => p.number);
   // Mora de la cuota que se esta cobrando (solo si se completa: un abono no la cobra).
   const lateFeeNow =
     action?.kind === 'collect' && !isPartial ? (action.installment.lateFee ?? 0) : 0;
@@ -155,10 +164,26 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
             aria-label="Avance de cobro"
           />
 
-          {queued.length > 0 && (
-            <Text size="sm" c="orange">
-              Cobro sin enviar (cuota {queued.join(', ')}): se registra cuando vuelva la señal.
-            </Text>
+          {queuedEntries.length > 0 && (
+            <Stack gap={2}>
+              <Text size="sm" c="orange">
+                Cobro sin enviar (cuota {queued.join(', ')}): se registra cuando vuelva la señal.
+              </Text>
+              {queuedEntries.map((entry) => (
+                <Button
+                  key={entry.reference}
+                  size="compact-xs"
+                  variant="subtle"
+                  color="orange"
+                  w="fit-content"
+                  px={0}
+                  leftSection={<IconReceipt size={14} />}
+                  onClick={() => setReceiptFor({ number: entry.number, pending: entry })}
+                >
+                  Recibo provisorio de la cuota {entry.number}
+                </Button>
+              ))}
+            </Stack>
           )}
 
           {canCollect && next && !queued.includes(next.number) && (
@@ -362,6 +387,7 @@ export function InstallmentsSection({ loan }: { loan: LoanResponse }) {
         loan={loan}
         row={(loan.schedule ?? []).find((r) => r.number === receiptFor?.number) ?? null}
         partial={receiptFor?.partial}
+        pending={receiptFor?.pending}
         onClose={() => setReceiptFor(null)}
       />
     </>

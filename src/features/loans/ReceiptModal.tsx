@@ -4,7 +4,15 @@ import { useRef } from 'react';
 import type { InstallmentResponse, LoanResponse } from '../../api/types';
 import { formatDateTime, formatMoney } from '../../shared/format';
 import { ShareButton } from '../../shared/share/ShareButton';
-import { receiptData, receiptMessage, type PartialPayment, type ReceiptData } from './receipt';
+import { useAuthStore } from '../../auth/authStore';
+import type { PendingCollection } from './offlineCollections';
+import {
+  provisionalReceiptData,
+  receiptData,
+  receiptMessage,
+  type PartialPayment,
+  type ReceiptData,
+} from './receipt';
 
 /**
  * Recibo de una cuota cobrada (por ejemplo en efectivo, en persona): para mandarlo por WhatsApp o
@@ -14,16 +22,24 @@ export function ReceiptModal({
   loan,
   row,
   partial,
+  pending,
   onClose,
 }: {
   loan: LoanResponse;
   row: InstallmentResponse | null;
   /** Recibo de un abono parcial (la cuota sigue pendiente). */
   partial?: PartialPayment;
+  /** Cobro sin conexion todavia no enviado: recibo provisorio. */
+  pending?: PendingCollection;
   onClose: () => void;
 }) {
   const ticket = useRef<HTMLDivElement>(null);
-  const data = row ? receiptData(loan, row, partial) : null;
+  const collector = useAuthStore((s) => s.user?.fullName ?? loan.sellerName);
+  const data = row
+    ? pending
+      ? provisionalReceiptData(loan, row, pending, collector)
+      : receiptData(loan, row, partial)
+    : null;
 
   return (
     <Modal opened={row !== null} onClose={onClose} title="Recibo de pago" centered>
@@ -77,13 +93,25 @@ export function ReceiptTicket({ data }: { data: ReceiptData }) {
             L.A TK
           </Text>
           <Text size="xs" style={{ color: '#555' }}>
-            Recibo de pago
+            {data.provisional ? 'Recibo provisorio' : 'Recibo de pago'}
           </Text>
         </div>
         <Text size="sm" fw={700} style={{ color: '#111' }}>
           {data.number}
         </Text>
       </Group>
+      {data.provisional && (
+        <Text
+          size="xs"
+          fw={700}
+          ta="center"
+          mt="xs"
+          p={4}
+          style={{ color: '#9a3412', background: '#ffedd5', borderRadius: 6 }}
+        >
+          PENDIENTE DE CONFIRMAR · se registra cuando vuelva la señal
+        </Text>
+      )}
       <Divider my="sm" variant="dashed" />
       <Text size="sm" style={{ color: '#111' }}>
         Recibimos de <b>{data.customerName}</b>

@@ -28,7 +28,10 @@ export function LoanActionsMenu({
   const active = loan.status === 'DISBURSED';
   const canSettle = active && hasPermission(user, Permission.COLLECTION_REGISTER);
   const canIncrease = active && hasPermission(user, Permission.LOAN_REQUEST);
-  const pendingIncrease = increases.some((i) => i.status === 'REQUESTED');
+  // Pedido o aprobado sin transferir: no se puede pedir otro.
+  const pendingIncrease = increases.some(
+    (i) => i.status === 'REQUESTED' || i.status === 'APPROVED',
+  );
   const [settleOpen, settleModal] = useDisclosure(false);
   const [increaseOpen, increaseModal] = useDisclosure(false);
 
@@ -54,7 +57,7 @@ export function LoanActionsMenu({
               onClick={increaseModal.open}
               disabled={pendingIncrease}
             >
-              {pendingIncrease ? 'Aumento pendiente' : 'Pedir aumento'}
+              {pendingIncrease ? 'Aumento en curso' : 'Pedir aumento'}
             </Menu.Item>
           )}
         </Menu.Dropdown>

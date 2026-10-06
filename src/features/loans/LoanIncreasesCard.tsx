@@ -1,7 +1,18 @@
-import { Badge, Button, Card, Group, Modal, Stack, Text, Textarea } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Modal,
+  Skeleton,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCheck, IconTrendingUp, IconX } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { IconCheck, IconSend, IconTrendingUp, IconX } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
 import type { LoanIncrease, LoanResponse } from '../../api/types';
@@ -10,16 +21,19 @@ import { hasPermission, Permission } from '../../auth/permissions';
 import { Foldable } from '../../shared/components/Foldable';
 import { formatDate, formatMoney, formatMoneyShort } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
+import { CopyRow } from './DisbursementCard';
 
 const STATUS: Record<LoanIncrease['status'], { label: string; color: string }> = {
   REQUESTED: { label: 'Pendiente', color: 'yellow' },
-  APPROVED: { label: 'Aprobado', color: 'teal' },
+  APPROVED: { label: 'Falta transferir', color: 'blue' },
+  DISBURSED: { label: 'Transferido', color: 'teal' },
   REJECTED: { label: 'Rechazado', color: 'red' },
 };
 
 /**
- * Aumentos del prestamo. El pendiente se ve arriba (el admin lo aprueba o rechaza ahi mismo); los
- * ya decididos quedan en un historial plegado. Sin aumentos, no se muestra nada.
+ * Aumentos del prestamo. El que esta en curso se ve arriba: pendiente (el admin lo aprueba o
+ * rechaza) o aprobado sin transferir (quien transfiere lo registra y recien ahi se agregan las
+ * cuotas). Los terminados quedan en un historial plegado. Sin aumentos, no se muestra nada.
  */
 export function LoanIncreasesCard({
   loan,
@@ -29,11 +43,13 @@ export function LoanIncreasesCard({
   increases: LoanIncrease[];
 }) {
   const pending = increases.find((i) => i.status === 'REQUESTED');
-  const decided = increases.filter((i) => i.status !== 'REQUESTED');
+  const approved = increases.find((i) => i.status === 'APPROVED');
+  const decided = increases.filter((i) => i.status === 'DISBURSED' || i.status === 'REJECTED');
   if (increases.length === 0) return null;
   return (
     <>
       {pending && <PendingIncrease loan={loan} increase={pending} />}
+      {approved && <ApprovedIncrease loan={loan} increase={approved} />}
       {decided.length > 0 && (
         <Foldable
           title="Aumentos"
@@ -59,6 +75,8 @@ export function LoanIncreasesCard({
                   Pedido por {i.requestedByName} el {formatDate(i.requestedAt)}
                   {i.decidedAt && ` · decidido el ${formatDate(i.decidedAt)}`}
                   {i.decidedByName && ` por ${i.decidedByName}`}
+                  {i.disbursedAt && ` · transferido el ${formatDate(i.disbursedAt)}`}
+                  {i.disbursementReference && ` (${i.disbursementReference})`}
                 </Text>
                 {i.reason && <Text size="xs">Motivo: {i.reason}</Text>}
               </Stack>
@@ -92,7 +110,9 @@ function PendingIncrease({ loan, increase }: { loan: LoanResponse; increase: Loa
       rejectModal.close();
       approveModal.close();
       refresh();
-      notifySuccess(approve ? 'Aumento aprobado: se agregaron las cuotas' : 'Aumento rechazado');
+      notifySuccess(
+        approve ? 'Aumento aprobado: falta registrar la transferencia' : 'Aumento rechazado',
+      );
     },
     onError: (error) => {
       rejectModal.close();
@@ -141,9 +161,9 @@ function PendingIncrease({ loan, increase }: { loan: LoanResponse; increase: Loa
       <Modal opened={approving} onClose={approveModal.close} title="Aprobar aumento" centered>
         <Stack>
           <Text size="sm">
-            Al aprobar, transferí <b>{formatMoney(increase.extraPrincipal)}</b> a{' '}
-            <b>{loan.customerName}</b>. Se agregan {increase.extraInstallments} cuotas al final del
-            préstamo.
+            Se aprueba el aumento de <b>{formatMoney(increase.extraPrincipal)}</b> para{' '}
+            <b>{loan.customerName}</b>. Las {increase.extraInstallments} cuotas se agregan cuando se
+            registre la transferencia.
           </Text>
           <Group grow>
             <Button variant="default" onClick={approveModal.close} disabled={decide.isPending}>
@@ -178,6 +198,102 @@ function PendingIncrease({ loan, increase }: { loan: LoanResponse; increase: Loa
               disabled={!reason.trim()}
             >
               Rechazar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Card>
+  );
+}
+
+/** Aumento aprobado: falta transferir. Quien registra transferencias lo hace aca, como un prestamo. */
+function ApprovedIncrease({ loan, increase }: { loan: LoanResponse; increase: LoanIncrease }) {
+  const user = useAuthStore((s) => s.user);
+  const canDisburse = hasPermission(user, Permission.DISBURSEMENT_REGISTER);
+  const queryClient = useQueryClient();
+  const [confirming, modal] = useDisclosure(false);
+  const [reference, setReference] = useState('');
+  const customer = useQuery({
+    queryKey: queryKeys.customer(loan.customerId),
+    queryFn: () => api.customer(loan.customerId),
+    enabled: canDisburse,
+  });
+  const account = customer.data?.bankAccount;
+
+  const disburse = useMutation({
+    mutationFn: () => api.disburseIncrease(loan.id, increase.id, reference.trim() || null),
+    onSuccess: () => {
+      modal.close();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.loanIncreases(loan.id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.loan(loan.id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.loans });
+      notifySuccess(`Transferencia registrada: se agregaron ${increase.extraInstallments} cuotas`);
+    },
+    onError: (error) => {
+      modal.close();
+      notifyError(error);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.loanIncreases(loan.id) });
+    },
+  });
+
+  return (
+    <Card withBorder padding="md" style={{ borderColor: 'var(--mantine-color-blue-5)' }}>
+      <Stack gap="sm">
+        <Group gap="xs" wrap="nowrap">
+          <IconTrendingUp size={20} />
+          <Text fw={700}>
+            Aumento aprobado: falta transferir {formatMoneyShort(increase.extraPrincipal)}
+          </Text>
+        </Group>
+        <Text size="sm">
+          +{increase.extraInstallments} cuota{increase.extraInstallments === 1 ? '' : 's'} de{' '}
+          {formatMoneyShort(increase.installmentAmount)}. Se agregan al plan cuando se registra la
+          transferencia.
+        </Text>
+        {!canDisburse && (
+          <Text size="xs" c="dimmed">
+            Esperando que el administrador registre la transferencia.
+          </Text>
+        )}
+        {canDisburse && (
+          <>
+            {customer.isLoading && <Skeleton h={60} />}
+            {account && (
+              <Stack gap={4}>
+                <CopyRow label={account.virtual ? 'CVU' : 'CBU'} value={account.cbu} />
+                {account.alias && <CopyRow label="Alias" value={account.alias} />}
+              </Stack>
+            )}
+            <TextInput
+              label="Comprobante (opcional)"
+              placeholder="Ej.: nro. de operación"
+              maxLength={100}
+              value={reference}
+              onChange={(e) => setReference(e.currentTarget.value)}
+            />
+            <Button leftSection={<IconSend size={18} />} onClick={modal.open}>
+              Registrar transferencia del aumento
+            </Button>
+          </>
+        )}
+      </Stack>
+
+      <Modal opened={confirming} onClose={modal.close} title="Transferencia del aumento" centered>
+        <Stack>
+          <Text size="sm">
+            Confirmás que transferiste <b>{formatMoney(increase.extraPrincipal)}</b> a{' '}
+            <b>{loan.customerName}</b>?
+          </Text>
+          <Text size="sm" c="dimmed">
+            Se agregan {increase.extraInstallments} cuotas al final del préstamo, con la misma
+            frecuencia.
+          </Text>
+          <Group grow>
+            <Button variant="default" onClick={modal.close} disabled={disburse.isPending}>
+              Volver
+            </Button>
+            <Button onClick={() => disburse.mutate()} loading={disburse.isPending}>
+              Confirmar
             </Button>
           </Group>
         </Stack>

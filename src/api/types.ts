@@ -13,6 +13,8 @@ export type PaymentFrequency =
 
 /** FRENCH: tasa por periodo. FLAT: interes plano, tasa por todo el plazo. Solo lo ve el admin. */
 export type InterestMethod = 'FRENCH' | 'FLAT';
+/** Metodo con que se calculo un prestamo: el general o la cuota fija del producto. */
+export type LoanInterestMethod = InterestMethod | 'FIXED_INSTALLMENT';
 
 export interface LendingSettings {
   interestMethod: InterestMethod;
@@ -37,12 +39,16 @@ export interface LoanIncrease {
   extraInstallments: number;
   installmentAmount: number;
   extraPrincipal: number;
-  status: 'REQUESTED' | 'APPROVED' | 'REJECTED';
+  /** APPROVED: aprobado, falta registrar la transferencia. DISBURSED: cuotas agregadas. */
+  status: 'REQUESTED' | 'APPROVED' | 'DISBURSED' | 'REJECTED';
   requestedByName: string;
   requestedAt: string;
   decidedByName?: string | null;
   decidedAt?: string | null;
   reason?: string | null;
+  disbursedByName?: string | null;
+  disbursedAt?: string | null;
+  disbursementReference?: string | null;
 }
 
 export interface BackupImportResult {
@@ -95,6 +101,8 @@ export interface ProductResponse extends Omit<
   sellerVisible: boolean;
   /** Tasa efectiva por cantidad de cuotas ("8" -> 0.17). Ausente para vendedores. */
   ratesByInstallments?: Record<string, number>;
+  /** "Fijar cuota": cuota por cada $10.000 por cantidad de cuotas. Ausente si usa la tasa. */
+  fixedInstallments?: Record<string, number>;
   id: string;
   active: boolean;
   availableToday: boolean;
@@ -299,7 +307,7 @@ export interface LoanResponse {
   /** Ausente para vendedores: no ven la tasa. */
   ratePerPeriod?: number;
   /** Ausente para vendedores. */
-  interestMethod?: InterestMethod;
+  interestMethod?: LoanInterestMethod;
   principal: number;
   installments: number;
   installmentAmount: number;

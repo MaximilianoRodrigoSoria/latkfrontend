@@ -101,7 +101,7 @@ test.describe('administrador', () => {
     await expect(page.getByRole('switch', { name: /Cobrar papelería/ })).not.toBeChecked();
   });
 
-  test('aumento: el vendedor lo pide y el admin lo decide', async ({ page, browser }, info) => {
+  test('aumento: se pide, se aprueba y se transfiere', async ({ page, browser }, info) => {
     test.skip(info.project.name !== 'escritorio', 'modifica un prestamo');
     const sellerContext = await browser.newContext({ baseURL: info.project.use.baseURL });
     const seller = await sellerContext.newPage();
@@ -111,22 +111,51 @@ test.describe('administrador', () => {
     const loanUrl = seller.url();
     await seller.getByRole('button', { name: 'Más acciones' }).click();
     await seller.getByRole('menuitem', { name: 'Pedir aumento' }).click();
-    await seller.getByLabel('¿Cuántas cuotas querés agregar?').fill('2');
+    await seller.getByLabel('¿Cuántas cuotas querés agregar?').fill('1');
     await expect(seller.getByText(/El cliente recibe .* más/)).toBeVisible();
     await seller.getByRole('button', { name: 'Pedir aumento' }).click();
     await expect(seller.getByText('Aumento pendiente de aprobación')).toBeVisible();
     await sellerContext.close();
 
-    // El admin lo ve en el prestamo y lo rechaza (asi los datos de prueba no cambian).
+    // El admin lo aprueba: queda esperando la transferencia, sin cuotas nuevas todavia.
     await page.goto(new URL(loanUrl).pathname);
     await expect(page.getByText('Aumento pendiente de aprobación')).toBeVisible();
     await capture(page, info, '06d-admin-aumento-pendiente');
-    await page.getByRole('button', { name: 'Rechazar' }).click();
-    await page.getByLabel('Motivo').fill('Prueba automática');
-    await page.getByRole('dialog').getByRole('button', { name: 'Rechazar' }).click();
-    await expect(page.getByText('Aumento pendiente de aprobación')).toHaveCount(0);
+    const cuotas = page.getByText(/^\d+ de \d+ cobradas$/);
+    const before = await cuotas.textContent();
+    await page.getByRole('button', { name: 'Aprobar' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Aprobar' }).click();
+    await expect(page.getByText(/^Aumento aprobado: falta transferir/)).toBeVisible();
+    await expect(cuotas).toHaveText(before ?? '');
+
+    // Al registrar la transferencia se agrega la cuota.
+    await page.getByLabel('Comprobante (opcional)').fill('E2E 1');
+    await page.getByRole('button', { name: 'Registrar transferencia del aumento' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirmar' }).click();
+    await expect(page.getByText(/^Aumento aprobado: falta transferir/)).toHaveCount(0);
+    await expect(cuotas).not.toHaveText(before ?? '');
     await page.getByRole('button', { name: /^Aumentos/ }).click();
-    await expect(page.getByText('Rechazado').first()).toBeVisible();
+    await expect(page.getByText('Transferido').first()).toBeVisible();
+  });
+
+  test('fijar cuota de una categoría', async ({ page }, info) => {
+    test.skip(info.project.name !== 'escritorio', 'configuracion global');
+    await page.goto('/products');
+    await page.getByText('Administrar', { exact: true }).click();
+    const card = page.locator('.mantine-Card-root').filter({ hasText: 'Hierro' }).first();
+    await card.getByRole('button', { name: /^(Fijar cuota|Editar cuota fija)$/ }).click();
+    const dialog = page.getByRole('dialog');
+    const inputs = dialog.getByRole('textbox', { name: /^Cuota cada \$10\.000 en \d+ cuotas$/ });
+    const count = await inputs.count();
+    for (let i = 0; i < count; i++) await inputs.nth(i).fill('5000');
+    await expect(dialog.getByText(/ %$/).first()).toBeVisible();
+    await capture(page, info, '06f-admin-fijar-cuota');
+    await dialog.getByRole('button', { name: 'Guardar' }).click();
+    await expect(card.getByText(/· cuota fija$/)).toBeVisible();
+    // Se deja como estaba.
+    await card.getByRole('button', { name: 'Editar cuota fija' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Quitar cuota fija' }).click();
+    await expect(card.getByText(/· cuota fija$/)).toHaveCount(0);
   });
 
   test('saldar préstamo muestra el total a cobrar', async ({ page }) => {

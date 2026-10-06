@@ -117,7 +117,7 @@ export function DisbursementCard({ loan }: { loan: LoanResponse }) {
   );
 }
 
-function CopyRow({ label, value }: { label: string; value: string }) {
+export function CopyRow({ label, value }: { label: string; value: string }) {
   return (
     <Group justify="space-between" wrap="nowrap" gap="xs">
       <Stack gap={0} style={{ minWidth: 0 }}>

@@ -12,7 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api/endpoints';
-import type { InterestMethod, LendingSettings } from '../../api/types';
+import type { InterestMethod, LendingSettings, LoanInterestMethod } from '../../api/types';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { formatDateTime } from '../../shared/format';
 import { notifyError, notifySuccess } from '../../shared/notify';
@@ -20,6 +20,12 @@ import { notifyError, notifySuccess } from '../../shared/notify';
 export const INTEREST_METHOD_LABEL: Record<InterestMethod, string> = {
   FRENCH: 'Amortización francesa',
   FLAT: 'Interés plano',
+};
+
+/** Incluye la cuota fija, que no es opcion general: la define cada producto. */
+export const LOAN_METHOD_LABEL: Record<LoanInterestMethod, string> = {
+  ...INTEREST_METHOD_LABEL,
+  FIXED_INSTALLMENT: 'Cuota fija',
 };
 
 const HELP: Record<InterestMethod, string> = {

@@ -33,7 +33,7 @@ import {
 import { DisbursementCard } from './DisbursementCard';
 import { InstallmentsSection } from './InstallmentsSection';
 import { LoanDecisionActions } from './LoanDecisionActions';
-import { INTEREST_METHOD_LABEL } from '../settings/LendingSettingsPage';
+import { LOAN_METHOD_LABEL } from '../settings/LendingSettingsPage';
 import { CustomerBehaviorCard } from '../customers/CustomerBehavior';
 import { STATUS_COLOR, STATUS_LABEL } from './loanDraft';
 import { LoanActionsMenu } from './LoanActionsMenu';
@@ -131,7 +131,7 @@ export function LoanDetailPage() {
               {l.interestMethod && l.ratePerPeriod != null && (
                 <Row
                   label="Cálculo"
-                  value={`${INTEREST_METHOD_LABEL[l.interestMethod]} · ${formatRate(l.ratePerPeriod)}${l.interestMethod === 'FLAT' ? ' del plazo' : ' por cuota'}`}
+                  value={`${LOAN_METHOD_LABEL[l.interestMethod]} · ${formatRate(l.ratePerPeriod)}${l.interestMethod === 'FRENCH' ? ' por cuota' : ' del plazo'}`}
                 />
               )}
               {l.notes && <Row label="Notas del vendedor" value={l.notes} />}
